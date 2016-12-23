@@ -29,15 +29,15 @@ if( PHP_SAPI != 'cli' )
 date_default_timezone_set('Asia/Shanghai');
 
 //核心库目录
-define('CORE', dirname(__FILE__));
-define('PATH_ROOT', CORE."/../");
-define('PATH_DATA', CORE."/../data");
-define('PATH_LIBRARY', CORE."/../library");
+define('ROOT_PATH', dirname(dirname(__FILE__)).'/');
+define('PATH_DATA', ROOT_PATH."data");
+define('PATH_LIBRARY', ROOT_PATH."library");
+define('CORE', ROOT_PATH."core");
 
 //系统配置
-if( file_exists( PATH_ROOT."/config/inc_config.php" ) )
+if( file_exists( ROOT_PATH."config/inc_config.php" ) )
 {
-    require PATH_ROOT."/config/inc_config.php"; 
+    require ROOT_PATH."config/inc_config.php";
 }
 require CORE.'/log.php';
 require CORE.'/util.php';

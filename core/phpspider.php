@@ -647,10 +647,9 @@ class phpspider
             }
         }
 
-        log::$log_show = isset(self::$configs['log_show']) ? self::$configs['log_show'] : true;
-        log::$log_file = isset(self::$configs['log_file']) ?? PATH_DATA . '/spider.log';
-        var_dump(log::$log_file);
-        exit();
+        log::$log_show = self::$configs['log_show'] ?? true;
+        $file = date('Ymd').'_'.uniqid();
+        log::$log_file = self::$configs['log_file'] ?? PATH_DATA . "/$file.log";
 
         if (log::$log_show) {
             log::info("\n[" . self::$configs['name'] . "爬虫] 开始爬行...\n");
