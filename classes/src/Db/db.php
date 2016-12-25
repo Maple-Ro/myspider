@@ -41,7 +41,7 @@ class db
                 self::$conn_fail++;
                 $errmsg = 'Mysql Connect failed['.self::$conn_fail.']: ' . mysqli_connect_error();
                 echo util::colorize(date("H:i:s") . " {$errmsg}\n\n", 'fail');
-                log::add($errmsg, "Error");
+                Log::add($errmsg, "Error");
                 // 连接失败5次，中断进程
                 if (self::$conn_fail >= 5) 
                 {
@@ -137,7 +137,7 @@ class db
             if ($errno == 2013 || $errno == 2006) 
             {
                 $errmsg = mysqli_error(self::$conn);
-                log::add($errmsg, "Error");
+                Log::add($errmsg, "Error");
 
                 @mysqli_close(self::$conn);
                 self::$conn = null;
@@ -145,9 +145,9 @@ class db
             }
 
             $errmsg = "Query SQL: ".$sql;
-            log::add($errmsg, "Warning");
+            Log::add($errmsg, "Warning");
             $errmsg = "Error SQL: ".mysqli_error(self::$conn);
-            log::add($errmsg, "Warning");
+            Log::add($errmsg, "Warning");
 
             $backtrace = debug_backtrace();
             array_shift($backtrace);
@@ -167,7 +167,7 @@ class db
                 if($l['line']) $err .= " on line {$l['line']} ";
                 $err .= "\n";
             }
-            log::add($err);
+            Log::add($err);
 
             return false;
         }

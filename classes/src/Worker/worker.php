@@ -121,7 +121,7 @@ class worker
         // 这里赋值，worker进程也会克隆到
         if ($this->log_show) 
         {
-            log::$log_show = true;
+            Log::$log_show = true;
         }
 
         if ($this->on_start) 
@@ -183,7 +183,7 @@ class worker
         }
         else
         {
-            log::add("fork one worker fail", "Error");
+            Log::add("fork one worker fail", "Error");
             exit;
         }
     }
@@ -205,7 +205,7 @@ class worker
         {
             if(!posix_setgid($user_info['gid']) || !posix_setuid($user_info['uid']))
             {
-                log::add('Can not run woker as '.$user_name." , You shuld be root", "Error");
+                Log::add('Can not run woker as '.$user_name." , You shuld be root", "Error");
             }
         }
     }
@@ -261,7 +261,7 @@ class worker
                 // 如果不是正常退出，是被kill等杀掉的
                 if($status !== 0)
                 {
-                    log::add("worker {$pid} exit with status $status", "Warning");
+                    Log::add("worker {$pid} exit with status $status", "Warning");
                 }
 
                 // key 和 value 互换
@@ -371,7 +371,7 @@ class worker
             {
                 $error_msg .= $this->get_error_type($errors['type']) . " {$errors['message']} in {$errors['file']} on line {$errors['line']}";
             }
-            log::add($error_msg, 'Error');
+            Log::add($error_msg, 'Error');
         }
     }
 

@@ -1,6 +1,6 @@
 <?php
 ini_set("memory_limit", "1024M");
-require dirname(__FILE__).'/../core/init.php';
+require dirname(__FILE__) . '/../src/init.php';
 
 /* Do NOT delete this comment */
 /* 不要删除这段注释 */
@@ -49,7 +49,7 @@ $configs = array(
     ),
 );
 
-$spider = new phpspider($configs);
+$spider = new PhpSpider($configs);
 
 $spider->on_start = function($phpspider) 
 {

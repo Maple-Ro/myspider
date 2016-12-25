@@ -32,17 +32,17 @@ date_default_timezone_set('Asia/Shanghai');
 define('ROOT_PATH', dirname(dirname(__FILE__)).'/');
 define('PATH_DATA', ROOT_PATH."data");
 define('PATH_LIBRARY', ROOT_PATH."library");
-define('CORE', ROOT_PATH."core");
+define('CORE', ROOT_PATH."src");
 
 //系统配置
 if( file_exists( ROOT_PATH."config/inc_config.php" ) )
 {
     require ROOT_PATH."config/inc_config.php";
 }
-require CORE.'/log.php';
-require CORE.'/util.php';
-require CORE.'/db.php';
-require CORE.'/cache.php';
+require CORE . '/Log.php';
+require CORE . '/util.php';
+require CORE . '/db.php';
+require CORE . '/cache.php';
 
 // 启动的时候生成data目录
 util::path_exists(PATH_DATA);
@@ -51,8 +51,8 @@ util::path_exists(PATH_DATA."/log");
 util::path_exists(PATH_DATA."/cache");
 util::path_exists(PATH_DATA."/status");
 
-require CORE."/worker.php"; 
-require CORE."/phpspider.php"; 
+require CORE . "/worker.php";
+require CORE . "/PhpSpider.php";
 
 /**
  * 自动加载类库处理
@@ -78,7 +78,7 @@ function __autoload( $classname )
     }
     catch ( Exception $e )
     {
-        log::error($e->getMessage().'|'.$classname);
+        Log::error($e->getMessage().'|'.$classname);
         exit();
     }
 }

@@ -33,7 +33,7 @@ class cache
         else
         {
             $errmsg = "extension redis is not installed";
-            log::add($errmsg, "Error");
+            Log::add($errmsg, "Error");
             return null;
         }
         // 这里不能用pconnect，会报错：Uncaught exception 'RedisException' with message 'read error on connection'
@@ -45,7 +45,7 @@ class cache
             if ( !$_instance->auth($GLOBALS['config']['redis']['pass']) ) 
             {
                 $errmsg = "Redis Server authentication failed!!";
-                log::add($errmsg, "Error");
+                Log::add($errmsg, "Error");
                 return null;
             }
         }

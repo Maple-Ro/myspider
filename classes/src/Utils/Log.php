@@ -1,6 +1,6 @@
 <?php
-
-class log
+namespace Maple\PhpSpider;
+class Log
 {
     public static $log_show = false;
     public static $log_file = false;

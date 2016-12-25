@@ -33,10 +33,9 @@ class cls_curl
     /**
      * set timeout
      *
-     * @param init $timeout
-     * @return
+     * @param int $timeout
      */
-    public static function set_timeout($timeout)
+    public static function set_timeout(int $timeout)
     {
         self::$timeout = $timeout;
     }
