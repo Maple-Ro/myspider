@@ -1,5 +1,9 @@
 <?php
 namespace Maple\PhpSpider;
+
+use Maple\Caches\RedisHelper;
+use Maple\HttpHelper\CurlHelper;
+
 /**
  * PhpSpider - A PHP Framework For Crawler
  *
@@ -293,7 +297,7 @@ class PhpSpider
 //            log::error("未知错误；请参考文档或寻求技术支持。");
 //            exit;
 //        }
-       //初始化配置
+        //初始化配置
         self::$configs = $configs;
         self::$configs['name'] = isset(self::$configs['name']) ?? 'phpSpider_' . uniqid();
         self::$configs['proxy'] = isset(self::$configs['proxy']) ?? '';
@@ -324,54 +328,54 @@ class PhpSpider
         }
     }
 
-    public function addUserAgent($useragent)
+    /**
+     * 添加模拟的浏览器设备名
+     * @param string $userAgent
+     */
+    public function addUserAgent(string $userAgent)
     {
-        cls_curl::set_useragent($useragent);
+        CurlHelper::setUserAgent($userAgent);
     }
 
     /**
      * 一般在 on_start 回调函数中调用，用来添加一些HTTP请求的Header
-     *
-     * @param mixed $url
-     * @param mixed $options
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @param string $key
+     * @param string $value
      */
-    public function add_header($key, $value)
+    public function addHeader(string $key, string $value)
     {
         self::$headers[$key] = $value;
     }
 
     /**
-     * 一般在 on_start 回调函数中调用，用来得到某个域名所附带的某个Cookie
-     *
-     * @param mixed $name
-     * @param mixed $domain
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * 一般在 onStart 回调函数中调用，用来得到某个域名所附带的某个Cookie
+     * @param string $name
+     * @param string $domain
+     * @return mixed|string
      */
-    public function get_cookie($name, $domain = '')
+    public function getCookie(string $name, string $domain = '')
     {
-        $cookies = empty($domain) ? self::$cookies : self::$domainCookies[$domain];
-        return isset($cookies[$name]) ? $cookies[$name] : '';
+        $cookies = empty($domain) ?? self::$domainCookies[$domain];
+        return isset($cookies[$name]) ??'';
     }
 
-    public function get_cookies($domain = '')
+    /**
+     * 一般在 onStart 回调函数中调用，用来得到某个域名所附带的所有Cookie
+     * @param string $domain
+     * @return array|mixed
+     */
+    public function getCookies(string $domain = '')
     {
         return empty($domain) ? self::$cookies : self::$domainCookies[$domain];
     }
 
     /**
-     * 一般在on_start回调函数中调用，用来添加一些HTTP请求的Cookie
-     *
-     * @param mixed $cookies
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * 一般在onStart回调函数中调用，用来添加一个HTTP请求的Cookie
+     * @param $key
+     * @param $value
+     * @param string $domain
      */
-    public function add_cookie($key, $value, $domain = '')
+    public function addCookie(string $key, string $value, string $domain = '')
     {
         if (!empty($domain)) {
             self::$domainCookies[$domain][$key] = $value;
@@ -381,14 +385,10 @@ class PhpSpider
     }
 
     /**
-     * 一般在on_start回调函数中调用，用来添加一些HTTP请求的Cookie
-     *
-     * @param mixed $cookies
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @param string $cookies
+     * @param string $domain
      */
-    public function add_cookies($cookies, $domain = '')
+    public function addCookies(string $cookies, string $domain = '')
     {
         $cookies_arr = explode(";", $cookies);
         foreach ($cookies_arr as $cookie) {
@@ -401,68 +401,60 @@ class PhpSpider
                     $value .= trim(str_replace('"', '', $v));
                 }
             }
-
-            if (!empty($domain)) {
-                self::$domainCookies[$domain][$key] = $value;
-            } else {
-                self::$cookies[$key] = $value;
-            }
+            $this->addCookie($key, $value, $domain);
         }
     }
 
     /**
      * 一般在 on_scan_page 和 on_list_page 回调函数中调用，用来往待爬队列中添加url
      * 两个进程同时调用这个方法，传递相同url的时候，就会出现url重复进入队列
-     *
-     * @param mixed $url
-     * @param mixed $options
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @param string $url
+     * @param array $options
+     * @return bool|void
      */
-    public function add_url($url, $options = [])
+    public function add_url(string $url, array $options = [])
     {
         // 投递状态
         $status = false;
-        $link = array(
+        $link = [
             'url' => $url,
             'url_type' => '',
-            'method' => isset($options['method']) ? $options['method'] : 'get',
-            'headers' => isset($options['headers']) ? $options['headers'] : self::$headers,
-            'params' => isset($options['params']) ? $options['params'] : [],
-            'context_data' => isset($options['context_data']) ? $options['context_data'] : '',
-            'proxy' => isset($options['proxy']) ? $options['proxy'] : self::$configs['proxy'],
-            'proxy_auth' => isset($options['proxy_auth']) ? $options['proxy_auth'] : self::$configs['proxy_auth'],
-            'collect_count' => isset($options['collect_count']) ? $options['collect_count'] : 0,
-            'collect_fails' => isset($options['collect_fails']) ? $options['collect_fails'] : self::$configs['collect_fails'],
-        );
+            'method' => isset($options['method']) ?? 'get',
+            'headers' => isset($options['headers']) ?? self::$headers,
+            'params' => isset($options['params']) ?? [],
+            'context_data' => isset($options['context_data']) ?? '',
+            'proxy' => isset($options['proxy']) ??self::$configs['proxy'],
+            'proxy_auth' => isset($options['proxy_auth']) ?? self::$configs['proxy_auth'],
+            'collect_count' => isset($options['collect_count']) ?? 0,
+            'collect_fails' => isset($options['collect_fails']) ?? self::$configs['collect_fails'],
+        ];
 
-        if (!empty(self::$configs['list_url_regexes'])) {
-            foreach (self::$configs['list_url_regexes'] as $regex) {
-                if (preg_match("#{$regex}#i", $url) && !$this->is_collect_url($url)) {
+        if (!empty(self::$configs['list_url_regex'])) {
+            foreach (self::$configs['list_url_regex'] as $regex) {
+                if (preg_match("#{$regex}#i", $url) && !$this->isCollectUrl($url)) {
                     log::debug(date("H:i:s") . " 发现列表网页：{$url}");
                     $link['url_type'] = 'list_page';
-                    $status = $this->queue_lpush($link);
+                    $status = $this->queueLeftPush($link);
                 }
             }
         }
 
-        if (!empty(self::$configs['content_url_regexes'])) {
-            foreach (self::$configs['content_url_regexes'] as $regex) {
-                if (preg_match("#{$regex}#i", $url) && !$this->is_collect_url($url)) {
+        if (!empty(self::$configs['content_url_reg'])) {
+            foreach (self::$configs['content_url_reg'] as $regex) {
+                if (preg_match("#{$regex}#i", $url) && !$this->isCollectUrl($url)) {
                     log::debug(date("H:i:s") . " 发现内容网页：{$url}");
                     $link['url_type'] = 'content_page';
-                    $status = $this->queue_lpush($link);
+                    $status = $this->queueLeftPush($link);
                 }
             }
         }
 
-        if (!empty(self::$configs['attachment_url_regexes'])) {
-            foreach (self::$configs['attachment_url_regexes'] as $regex) {
-                if (preg_match("#{$regex}#i", $url) && !$this->is_collect_url($url)) {
+        if (!empty(self::$configs['attachment_url_reg'])) {
+            foreach (self::$configs['attachment_url_reg'] as $regex) {
+                if (preg_match("#{$regex}#i", $url) && !$this->isCollectUrl($url)) {
                     log::debug(date("H:i:s") . " 发现网页文件：{$url}");
                     $link['url_type'] = 'attachment_file';
-                    $status = $this->queue_lpush($link);
+                    $status = $this->queueLeftPush($link);
                 }
             }
         }
@@ -470,7 +462,7 @@ class PhpSpider
         if ($status) {
             $msg = "Success process page {$url}\n";
         } else {
-            $msg = "URL not match content_url_regexes and list_url_regexes, {$url}\n";
+            $msg = "URL not match content_url_reg and list_url_reg, {$url}\n";
         }
         return $status;
     }
@@ -512,8 +504,8 @@ class PhpSpider
             "\033[47;30mfields\033[0m" . str_pad('', 12 - strlen('fields')) .
             "\n";
 
-        $collect = $this->count_collect_url();
-        $collected = $this->count_collected_url();
+        $collect = $this->countCollectUrl();
+        $collected = $this->countCollectedUrl();
         $remain = $collect - $collected;
         $queue = $this->queue_lsize();
         $fields = $this->get_fields_num();
@@ -596,7 +588,7 @@ class PhpSpider
 
     public function start()
     {
-        $this->parse_command();
+        $this->parseCommand();
 
         // 爬虫开始时间
         self::$timeStart = time();
@@ -703,7 +695,7 @@ class PhpSpider
                 'collect_count' => 0,                               // 抓取次数
                 'collect_fails' => self::$configs['collect_fails'], // 允许抓取失败次数
             ];
-            $this->queue_lpush($link);
+            $this->queueLeftPush($link);
         }
 
         while ($this->queue_lsize()) {
@@ -733,7 +725,7 @@ class PhpSpider
         $spider_time_run = util::time2second(intval(microtime(true) - self::$timeStart));
         log::info("爬虫运行时间：{$spider_time_run}\n");
 
-        $count_collected_url = $this->count_collected_url();
+        $count_collected_url = $this->countCollectedUrl();
         log::info("总共抓取网页：{$count_collected_url} 个\n\n");
 
         if (self::$taskNum > 1) {
@@ -803,13 +795,13 @@ class PhpSpider
      */
     public function collect_page()
     {
-        $count_collect_url = $this->count_collect_url();
+        $count_collect_url = $this->countCollectUrl();
         log::info(date("H:i:s") . " 发现抓取网页：{$count_collect_url} 个\n");
 
         $queue_lsize = $this->queue_lsize();
         log::info("等待抓取网页：{$queue_lsize} 个\n");
 
-        $count_collected_url = $this->count_collected_url();
+        $count_collected_url = $this->countCollectedUrl();
         log::info("已经抓取网页：{$count_collected_url} 个\n");
 
         // 先进先出
@@ -817,7 +809,7 @@ class PhpSpider
         $url = $link['url'];
 
         // 标记为已爬取网页
-        $this->set_collected_url($url);
+        $this->setCollectedUrl($url);
 
         // 爬取页面开始时间
         $page_time_start = microtime(true);
@@ -1058,7 +1050,7 @@ class PhpSpider
                     log::error(date("H:i:s") . " HTTP CODE：{$http_code} 网页不存在\n");
                 } elseif ($http_code == 407) {
                     // 扔到队列头部去，继续采集
-                    $this->queue_rpush($link);
+                    $this->queueRightPush($link);
                     log::error(date("H:i:s") . " 网页下载失败：{$url}\n");
                     log::error(date("H:i:s") . " 代理服务器验证失败，请检查代理服务器设置\n");
                 } elseif ($http_code == 502 || $http_code == 503 || $http_code == 0) {
@@ -1067,7 +1059,7 @@ class PhpSpider
                     // 抓取次数 小于 允许抓取失败次数
                     if ($link['collect_count'] < $link['collect_fails']) {
                         // 扔到队列头部去，继续采集
-                        $this->queue_rpush($link);
+                        $this->queueRightPush($link);
                     }
                     log::error(date("H:i:s") . " 网页下载失败：{$url} 失败次数：{$link['collect_count']}\n");
                     log::error(date("H:i:s") . " HTTP CODE：{$http_code} 服务器过载\n");
@@ -1249,26 +1241,23 @@ class PhpSpider
     }
 
     /**
-     * 是否待爬取网页
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * 是否为待爬取网页
+     * @param string $url
+     * @return bool
      */
-    public function is_collect_url($url)
+    public function isCollectUrl(string $url): bool
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
             $lock = "lock-collect_urls-" . md5($url);
             // 如果不能上锁，说明同时有一个进程带了一样的URL进来判断，而且刚好比这个进程快一丢丢
             // 那么这个进程的URL就可以直接过滤了
-            if (!cls_redis::setnx($lock, "lock")) {
+            if (!RedisHelper::setNx($lock, "lock")) {
                 return true;
             } else {
                 // 删除锁然后判断一下这个连接是不是已经在队列里面了
-                cls_redis::del($lock);
-                return cls_redis::exists("collect_urls-" . md5($url));
+                RedisHelper::del($lock);
+                return RedisHelper::exists("collect_urls-" . md5($url));
             }
         } else {
             return array_key_exists(md5($url), self::$collectUrls);
@@ -1277,17 +1266,13 @@ class PhpSpider
 
     /**
      * 添加发现网页标记
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param string $url
      */
-    public function set_collect_url($url)
+    public function setCollectUrl(string $url)
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            cls_redis::set("collect_urls-" . md5($url), time());
+            RedisHelper::set("collect_urls-" . md5($url), time());
         } else {
             self::$collectUrls[md5($url)] = time();
         }
@@ -1295,37 +1280,27 @@ class PhpSpider
 
     /**
      * 删除发现网页标记
-     * 暂时没用到
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param string $url
      */
-    public function del_collect_url($url)
+    public function delCollectUrl(string $url)
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            cls_redis::del("collect_urls-" . md5($url));
+            RedisHelper::del("collect_urls-" . md5($url));
         } else {
             unset(self::$collectUrls[md5($url)]);
         }
     }
 
     /**
-     * 发现爬取网页数量
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * 统计爬取网页数量
+     * @return int
      */
-    public function count_collect_url()
+    public function countCollectUrl()
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $keys = cls_redis::keys("collect_urls-*");
-            $count = count($keys);
+            $count = count(RedisHelper::keysArray("collect_urls-*"));
         } else {
             $count = count(self::$collectUrls);
         }
@@ -1334,17 +1309,13 @@ class PhpSpider
 
     /**
      * 等待爬取网页数量
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @return int
      */
-    public function count_collected_url()
+    public function countCollectedUrl(): int
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $keys = cls_redis::keys("collected_urls-*");
+            $keys = RedisHelper::keys("collected_urls-*");
             $count = count($keys);
         } else {
             $count = count(self::$collectedUrls);
@@ -1354,17 +1325,14 @@ class PhpSpider
 
     /**
      * 是否已爬取网页
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param $url
+     * @return bool
      */
-    public function is_collected_url($url)
+    public function isCollectedUrl(string $url): bool
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            return cls_redis::exists("collected_urls-" . md5($url));
+            return RedisHelper::exists("collected_urls-" . md5($url));
         } else {
             return array_key_exists(md5($url), self::$collectedUrls);
         }
@@ -1372,17 +1340,13 @@ class PhpSpider
 
     /**
      * 添加已爬取网页标记
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param string $url
      */
-    public function set_collected_url($url)
+    public function setCollectedUrl(string $url)
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            cls_redis::set("collected_urls-" . md5($url), time());
+            RedisHelper::set("collected_urls-" . md5($url), time());
         } else {
             self::$collectedUrls[md5($url)] = time();
         }
@@ -1390,30 +1354,24 @@ class PhpSpider
 
     /**
      * 删除已爬取网页标记
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param string $url
      */
-    public function del_collected_url($url)
+    public function delCollectedUrl(string $url)
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            cls_redis::del("collected_urls-" . md5($url));
+            RedisHelper::del("collected_urls-" . md5($url));
         } else {
             unset(self::$collectedUrls[md5($url)]);
         }
     }
 
     /**
-     * 从队列左边插入
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * 从队列左边插入新的url数据
+     * @param array $link
+     * @return bool
      */
-    public function queue_lpush($link = [])
+    public function queueLeftPush(array $link = [])
     {
         if (empty($link) || empty($link['url'])) {
             return false;
@@ -1421,11 +1379,10 @@ class PhpSpider
 
         $url = $link['url'];
         // 先标记为待爬取网页，再入爬取队列
-        $this->set_collect_url($url);
+        $this->setCollectUrl($url);
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $link = json_encode($link);
-            cls_redis::lpush("collect_queue", $link);
+            RedisHelper::lPush("collect_queue", json_encode($link));
         } else {
             array_push(self::$collectQueue, $link);
         }
@@ -1434,12 +1391,10 @@ class PhpSpider
 
     /**
      * 从队列右边插入
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param array $link
+     * @return bool
      */
-    public function queue_rpush($link = [])
+    public function queueRightPush(array $link = [])
     {
         if (empty($link) || empty($link['url'])) {
             return false;
@@ -1447,11 +1402,11 @@ class PhpSpider
 
         $url = $link['url'];
         // 先标记为待爬取网页，再入爬取队列
-        $this->set_collect_url($url);
+        $this->setCollectUrl($url);
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
             $link = json_encode($link);
-            cls_redis::rpush("collect_queue", $link);
+            RedisHelper::rPush("collect_queue", $link);
         } else {
             array_unshift(self::$collectQueue, $link);
         }
@@ -1463,17 +1418,13 @@ class PhpSpider
      * 后进先出
      * 可以避免采集内容页有分页的时候采集失败数据拼凑不全
      * 还可以按顺序采集列表页
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @return mixed|string
      */
-    public function queue_lpop()
+    public function queueLeftPop()
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $link = cls_redis::lpop("collect_queue");
-            $link = json_decode($link, true);
+            $link = json_decode(RedisHelper::lPop("collect_queue"), true);
         } else {
             $link = array_pop(self::$collectQueue);
         }
@@ -1838,13 +1789,13 @@ class PhpSpider
     {
     }
 
-    public function parse_command()
+    public function parseCommand()
     {
         // 检查运行命令的参数
         global $argv;
         $start_file = $argv[0];
         if (!isset($argv[1])) {
-            exit("Usage: php yourfile.php {start|stop|status}\n");
+            exit("Usage: php your file.php {start|stop|status}\n");
         }
 
         // 命令
@@ -1882,31 +1833,27 @@ class PhpSpider
                 break;
             // 未知命令
             default :
-                exit("Usage: php yourfile.php {start|stop|status}\n");
+                exit("Usage: php your file.php {start|stop|status}\n");
         }
     }
 
-    /**
-     * 创建一个子进程
-     * @param Worker $worker
-     * @throws Exception
-     */
-    public function fork_one_task($taskid)
+
+    public function fork_one_task(int $taskId)
     {
         $pid = pcntl_fork();
 
         // 主进程记录子进程pid
         if ($pid > 0) {
-            self::$taskPids[$taskid] = $pid;
+            self::$taskPids[$taskId] = $pid;
         } // 子进程运行
         elseif (0 === $pid) {
             self::$timeStart = microtime(true);
             self::$collectSuccess = 0;
             self::$collectFailure = 0;
-            self::$taskId = $taskid;
+            self::$taskId = $taskId;
             self::$taskMaster = false;
             self::$taskPid = posix_getpid();
-            log::info("任务" . self::$taskPid . "等待中...\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+            log::info("任务" . self::$taskPid . "等待中...\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
             // sleep 1秒，等待主任务设置状态
             sleep(1);
             // 第一次先判断主进程准备好没有

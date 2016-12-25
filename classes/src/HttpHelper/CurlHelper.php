@@ -1,4 +1,5 @@
 <?php
+namespace Maple\HttpHelper;
 /**
  * Worker多进程操作类
  *
@@ -12,11 +13,11 @@
  * @license http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
-class cls_curl
+class CurlHelper
 {
     protected static $timeout = 10;
     protected static $ch = null;
-    protected static $useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36';
+    protected static $userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36';
     protected static $http_raw = false;
     protected static $cookie = null;
     protected static $cookie_jar = null;
@@ -42,11 +43,11 @@ class cls_curl
 
     /**
      * 设置代理
-     * 
+     *
      * @param mixed $proxy
      * @param string $proxy_auth
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
     public static function set_proxy($proxy, $proxy_auth = '')
@@ -67,12 +68,12 @@ class cls_curl
     /**
      * 设置 user_agent
      *
-     * @param string $useragent
+     * @param string $userAgent
      * @return void
      */
-    public static function set_useragent($useragent)
+    public static function setUserAgent($userAgent)
     {
-        self::$useragent = $useragent;
+        self::$userAgent = $userAgent;
     }
 
     /**
@@ -110,10 +111,10 @@ class cls_curl
 
     /**
      * 获取内容的时候是不是连header也一起获取
-     * 
+     *
      * @param mixed $http_raw
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
     public static function set_http_raw($http_raw)
@@ -172,13 +173,12 @@ class cls_curl
     public static function init()
     {
         //if (empty ( self::$ch ))
-        if (!is_resource ( self::$ch ))
-        {
+        if (!is_resource ( self::$ch )) {
             self::$ch = curl_init ();
             curl_setopt( self::$ch, CURLOPT_RETURNTRANSFER, true );
             curl_setopt( self::$ch, CURLOPT_CONNECTTIMEOUT, self::$timeout );
             curl_setopt( self::$ch, CURLOPT_HEADER, false );
-            curl_setopt( self::$ch, CURLOPT_USERAGENT, self::$useragent );
+            curl_setopt(self::$ch, CURLOPT_USERAGENT, self::$userAgent);
             curl_setopt( self::$ch, CURLOPT_TIMEOUT, self::$timeout + 5);
             // 在多线程处理场景下使用超时选项时，会忽略signals对应的处理函数，但是无耐的是还有小概率的crash情况发生
             curl_setopt( self::$ch, CURLOPT_NOSIGNAL, true);
@@ -201,11 +201,11 @@ class cls_curl
      * $fields 有三种类型:1、数组；2、http query；3、json
      * 1、array('name'=>'yangzetao') 2、http_build_query(array('name'=>'yangzetao')) 3、json_encode(array('name'=>'yangzetao'))
      * 前两种是普通的post，可以用$_POST方式获取
-     * 第三种是post stream( json rpc，其实就是webservice )，虽然是post方式，但是只能用流方式 http://input 后者 $HTTP_RAW_POST_DATA 获取 
-     * 
-     * @param mixed $url 
-     * @param array $fields 
-     * @param mixed $proxy 
+     * 第三种是post stream( json rpc，其实就是webservice )，虽然是post方式，但是只能用流方式 http://input 后者 $HTTP_RAW_POST_DATA 获取
+     *
+     * @param mixed $url
+     * @param array $fields
+     * @param mixed $proxy
      * @static
      * @access public
      * @return void
@@ -219,14 +219,12 @@ class cls_curl
     public static function http_request($url, $type = 'get', $fields)
     {
         // 如果是 get 方式，直接拼凑一个 url 出来
-        if (strtolower($type) == 'get' && !empty($fields)) 
-        {
+        if (strtolower($type) == 'get' && !empty($fields)) {
             $url = $url . (strpos($url,"?")===false ? "?" : "&") . http_build_query($fields);
         }
 
         // 随机绑定 hosts，做负载均衡
-        if (self::$hosts) 
-        {
+        if (self::$hosts) {
             $parse_url = parse_url($url);
             $host = $parse_url['host'];
             $key = rand(0, count(self::$hosts)-1);
@@ -236,60 +234,47 @@ class cls_curl
         }
         curl_setopt( self::$ch, CURLOPT_URL, $url );
         // 如果是 post 方式
-        if (strtolower($type) == 'post')
-        {
+        if (strtolower($type) == 'post') {
             curl_setopt( self::$ch, CURLOPT_POST, true );
             curl_setopt( self::$ch, CURLOPT_POSTFIELDS, $fields );
         }
-        if (self::$useragent)
-        {
-            curl_setopt( self::$ch, CURLOPT_USERAGENT, self::$useragent );
+        if (self::$userAgent) {
+            curl_setopt(self::$ch, CURLOPT_USERAGENT, self::$userAgent);
         }
-        if (self::$cookie)
-        {
+        if (self::$cookie) {
             curl_setopt( self::$ch, CURLOPT_COOKIE, self::$cookie );
         }
-        if (self::$cookie_jar)
-        {
+        if (self::$cookie_jar) {
             curl_setopt( self::$ch, CURLOPT_COOKIEJAR, self::$cookie_jar );
         }
-        if (self::$cookie_file)
-        {
+        if (self::$cookie_file) {
             curl_setopt( self::$ch, CURLOPT_COOKIEFILE, self::$cookie_file );
         }
-        if (self::$referer)
-        {
+        if (self::$referer) {
             curl_setopt( self::$ch, CURLOPT_REFERER, self::$referer );
         }
-        if (self::$ip)
-        {
+        if (self::$ip) {
             self::$headers = array_merge( array('CLIENT-IP:'.self::$ip, 'X-FORWARDED-FOR:'.self::$ip), self::$headers );
         }
-        if (self::$headers)
-        {
+        if (self::$headers) {
             curl_setopt( self::$ch, CURLOPT_HTTPHEADER, self::$headers );
         }
-        if (self::$gzip)
-        {
+        if (self::$gzip) {
             curl_setopt( self::$ch, CURLOPT_ENCODING, 'gzip' );
         }
-        if (self::$proxy)
-        {
+        if (self::$proxy) {
             curl_setopt( self::$ch, CURLOPT_PROXY, self::$proxy );
-            if (self::$proxy_auth) 
-            {
+            if (self::$proxy_auth) {
                 curl_setopt( self::$ch, CURLOPT_PROXYUSERPWD, self::$proxy_auth);
             }
         }
-        if (self::$http_raw)
-        {
+        if (self::$http_raw) {
             curl_setopt( self::$ch, CURLOPT_HEADER, true );
         }
 
         $data = curl_exec ( self::$ch );
         self::$info = curl_getinfo(self::$ch);
-        if ($data === false)
-        {
+        if ($data === false) {
             //echo date("Y-m-d H:i:s"), ' Curl error: ' . curl_error( self::$ch ), "\n";
         }
 
@@ -316,8 +301,7 @@ function classic_curl($urls, $delay)
     $queue = curl_multi_init();
     $map = [];
 
-    foreach ($urls as $url) 
-    {
+    foreach ($urls as $url) {
         // create cURL resources
         $ch = curl_init();
 
@@ -343,8 +327,7 @@ function classic_curl($urls, $delay)
     while ($active > 0 && $mrc == CURLM_OK) {
         while (curl_multi_exec($queue, $active) === CURLM_CALL_MULTI_PERFORM);
         // 这里 curl_multi_select 一直返回 -1，所以这里就死循环了，CPU就100%了
-        if (curl_multi_select($queue, 0.5) != -1) 
-        {
+        if (curl_multi_select($queue, 0.5) != -1) {
             do {
                 $mrc = curl_multi_exec($queue, $active);
             } while ($mrc == CURLM_CALL_MULTI_PERFORM);
@@ -352,7 +335,7 @@ function classic_curl($urls, $delay)
     }
 
     $responses = [];
-    foreach ($map as $url=>$ch) {
+    foreach ($map as $url=> $ch) {
         //$responses[$url] = callback(curl_multi_getcontent($ch), $delay);
         $responses[$url] = callback(curl_multi_getcontent($ch), $delay, $url);
         curl_multi_remove_handle($queue, $ch);
@@ -420,8 +403,7 @@ function rolling_curl($urls, $delay)
 function callback($data, $delay, $url) {
     //echo $data;
     //echo date("Y-m-d H:i:s", time()) . " --- " . $url . "\n";
-    if (!empty($data)) 
-    {
+    if (!empty($data)) {
         file_put_contents("./html2/".md5($url).".html", $data);
     }
     // usleep模拟现实中比较负责的数据处理逻辑(如提取, 分词, 写入文件或数据库等)
