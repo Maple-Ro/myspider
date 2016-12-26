@@ -174,15 +174,15 @@ function save_user_info($worker = null)
             $data['info_progress_id'] = $progress_id;
             $data['last_message_week'] = empty($data['last_message_time']) ? 7 : intval(date("w"));
             $data['last_message_hour'] = empty($data['last_message_time']) ? 24 : intval(date("H"));
-            $sql = db::update('user', $data, "`username`='{$username}'", true);
-            db::query($sql);
+            $sql = databaseHelper::update('user', $data, "`username`='{$username}'", true);
+            databaseHelper::query($sql);
         }
         else 
         {
             $worker->log("采集用户信息 --- " . $username . " --- 失败\n");
             // 更新采集时间, 让队列每次都取到不同的用户，形成采集死循环
             $sql = "Update `user` Set `info_uptime`='{$time}',`info_progress_id`='{$progress_id}' Where `username`='{$username}'";
-            db::query($sql);
+            databaseHelper::query($sql);
         }
     }
     else 
@@ -206,7 +206,7 @@ function get_user_queue($key = 'list', $count = 10000)
     if (!cache::get_instance()->lsize($key)) 
     {
         $sql = "Select `username`, `{$key}_uptime` From `user` Order By `{$key}_uptime` Asc Limit {$count}";
-        $rows = db::get_all($sql);
+        $rows = databaseHelper::get_all($sql);
         foreach ($rows as $row) 
         {
             //echo $row['username'] . " --- " . date("Y-m-d H:i:s", $row[$key.'_uptime']) . "\n";
@@ -248,12 +248,12 @@ function save_user_index($worker = null)
         $username = addslashes($username);
         // 先把用户深度拿出来，下面要增加1给新用户
         $sql = "Select `depth` From `user` Where `username`='{$username}'";
-        $row = db::get_one($sql);
+        $row = databaseHelper::get_one($sql);
         $depth = $row['depth'];
 
         // 更新采集时间, 让队列每次都取到不同的用户
         $sql = "Update `user` Set `index_uptime`='{$time}',`index_progress_id`='{$progress_id}' Where `username`='{$username}'";
-        db::query($sql);
+        databaseHelper::query($sql);
 
         $worker->log("采集用户列表 --- " . $username . " --- 开始");
         // $user_rows = get_user_index($username);
@@ -276,14 +276,14 @@ function save_user_index($worker = null)
                 // 子用户
                 $c_username = addslashes($user_row['username']);
                 $sql = "Select Count(*) As count From `user` Where `username`='{$c_username}'";
-                $row = db::get_one($sql);
+                $row = databaseHelper::get_one($sql);
                 // 如果用户不存在
                 if (!$row['count']) 
                 {
                     $user_row['depth'] = $depth+1;
                     $user_row['parent_username'] = $username;
                     $user_row['addtime'] = $user_row['index_uptime'] = $user_row['info_uptime'] = time();
-                    if (db::insert('user', $user_row))
+                    if (databaseHelper::insert('user', $user_row))
                     {
                         $worker->log("入库用户 --- " . $c_username . " --- 成功");
                     }

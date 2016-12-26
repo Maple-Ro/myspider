@@ -1,12 +1,12 @@
 <?php
-
+namespace Maple\Utils;
 /**
  * 实用函数集合
  *
  * @author seatle<seatle@seatle.com>
  * @version $Id$
  */
-class util
+class Utils
 {
     /**
      * 文件锁
@@ -31,7 +31,7 @@ class util
      */
     public static function lock($lock_name, $lock_timeout = 600)
     {
-        $lock = util::get_file(PATH_DATA."/lock/{$lock_name}.lock");
+        $lock = Utils::get_file(PATH_DATA . "/lock/{$lock_name}.lock");
         if ($lock) 
         {
             $time = time() - $lock;
@@ -42,7 +42,7 @@ class util
             }
             unlink(PATH_DATA."/lock/{$lock_name}.lock");
         }
-        util::put_file(PATH_DATA."/lock/{$lock_name}.lock", time());
+        Utils::put_file(PATH_DATA . "/lock/{$lock_name}.lock", time());
         return false;
     }
 
@@ -406,14 +406,14 @@ class util
      * @access public
      * @return bool or string
      */
-    public static function path_exists($path)
+    public static function pathExists($path)
     {
-        $pathinfo = pathinfo($path . '/tmp.txt');
-        if (!empty($pathinfo['dirname']))
+        $p = pathinfo($path . '/tmp.txt');
+        if (!empty($p['dirname']))
         {
-            if (file_exists($pathinfo['dirname']) === false)
+            if (file_exists($p['dirname']) === false)
             {
-                if (mkdir($pathinfo['dirname'], 0777, true) === false)
+                if (mkdir($p['dirname'], 0777, true) === false)
                 {
                     return false;
                 }

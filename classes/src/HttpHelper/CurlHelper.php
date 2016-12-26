@@ -36,7 +36,7 @@ class CurlHelper
      *
      * @param int $timeout
      */
-    public static function set_timeout(int $timeout)
+    public static function setTimeout(int $timeout)
     {
         self::$timeout = $timeout;
     }
@@ -50,7 +50,7 @@ class CurlHelper
      * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
-    public static function set_proxy($proxy, $proxy_auth = '')
+    public static function setProxy($proxy, $proxy_auth = '')
     {
         self::$proxy = $proxy;
         self::$proxy_auth = $proxy_auth;
@@ -82,7 +82,7 @@ class CurlHelper
      * @param string $cookie
      * @return void
      */
-    public static function set_cookie($cookie)
+    public static function setCookie($cookie)
     {
         self::$cookie = $cookie;
     }
@@ -117,7 +117,7 @@ class CurlHelper
      * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
-    public static function set_http_raw($http_raw)
+    public static function setHttpRaw($http_raw)
     {
         self::$http_raw = $http_raw;
     }
@@ -139,7 +139,7 @@ class CurlHelper
      * @param string $headers
      * @return void
      */
-    public static function set_headers($headers)
+    public static function setHeaders($headers)
     {
         self::$headers = $headers;
     }
@@ -285,12 +285,12 @@ class CurlHelper
         return $data;
     }
 
-    public static function get_info()
+    public static function getInfo()
     {
         return self::$info;
     }
 
-    public static function get_http_code()
+    public static function getHttpCode()
     {
         return self::$info['http_code'];
     }

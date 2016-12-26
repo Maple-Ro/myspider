@@ -23,7 +23,7 @@ $curl->callback = function($response, $info, $request, $error) {
 
     if (empty($response)) 
     {
-        db::update('user', $server_data, "`username`='{$username}'");
+        databaseHelper::update('user', $server_data, "`username`='{$username}'");
         file_put_contents("./data/error_timeout.log", date("Y-m-d H:i:s") . ' ' . $username.' --- '.json_encode($error)."\n", FILE_APPEND);
         // 注意这里不要用 exit，否则整个程序就断开了
         return;
@@ -35,13 +35,13 @@ $curl->callback = function($response, $info, $request, $error) {
         $data = get_user_about($response);
         if (empty($data)) 
         {
-            db::update('user', $server_data, "`username`='{$username}'");
+            databaseHelper::update('user', $server_data, "`username`='{$username}'");
             file_put_contents("./data/error_emptydata.log", date("Y-m-d H:i:s") . ' ' . $username." about data not exists --- \n", FILE_APPEND);
             return;
         }
 
         $data = array_merge($data, $server_data);
-        db::update('user', $data, "`username`='{$username}'");
+        databaseHelper::update('user', $data, "`username`='{$username}'");
         //file_put_contents("./data/info/".$username.".json", json_encode($data));
         return;
     }
@@ -49,14 +49,14 @@ $curl->callback = function($response, $info, $request, $error) {
     $data = get_user($response);
     if (empty($data)) 
     {
-        db::update('user', $server_data, "`username`='{$username}'");
+        databaseHelper::update('user', $server_data, "`username`='{$username}'");
         file_put_contents("./data/error_emptydata.log", date("Y-m-d H:i:s") . ' ' . $username." info data not exists --- \n", FILE_APPEND);
         return;
     }
     $data['last_message_week'] = empty($data['last_message_time']) ? 7 : intval(date("w", $data['last_message_time']));
     $data['last_message_hour'] = empty($data['last_message_time']) ? 24 : intval(date("H", $data['last_message_time']));
     $data = array_merge($data, $server_data);
-    db::update('user', $data, "`username`='{$username}'");
+    databaseHelper::update('user', $data, "`username`='{$username}'");
     //file_put_contents("./data/about/".$username.".json", json_encode($data));
 };
 

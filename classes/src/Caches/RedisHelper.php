@@ -196,22 +196,16 @@ class RedisHelper
     }
 
     /**
-     * get
-     *
-     * @param mixed $key
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-13 01:05
+     * 获取键对应的值
+     * @param $key
+     * @return bool|null|string
      */
     public static function get($key)
     {
         $redis = self::init();
-
         if ($redis) {
-            $value = $redis->get($key);
-            return $value;
+            return $redis->get($key);
         }
-
         return NULL;
     }
 
@@ -260,26 +254,22 @@ class RedisHelper
 
     /**
      * incr 名称为key的string增加integer, integer为0则增1
-     *
-     * @param mixed $key
+     * @param $key
      * @param int $integer
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @return int 新的数量
      */
-    public static function incr($key, $integer = 0)
+    public static function incr($key, $integer = 0): int
     {
         $redis = self::init();
 
         if ($redis) {
-            if (empty($integer)) {
+            if ($integer === 0) {
                 return $redis->incr($key);
             } else {
                 return $redis->incrby($key, $integer);
             }
         }
-
-        return NULL;
+        return 0;
     }
 
     /**

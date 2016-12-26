@@ -44,7 +44,7 @@ $w->on_worker_start = function($worker) use ($count) {
         if (empty($content)) 
         {
             file_put_contents("./data/error_timeout.log", date("Y-m-d H:i:s") . ' ' . $username."\n", FILE_APPEND);
-            db::update('user', $server_data, "`username`='{$username}'");
+            databaseHelper::update('user', $server_data, "`username`='{$username}'");
             return;
         }
 
@@ -52,7 +52,7 @@ $w->on_worker_start = function($worker) use ($count) {
         if (empty($data)) 
         {
             file_put_contents("./data/error_emptydata.log", date("Y-m-d H:i:s") . ' ' . $username." info data not exists --- \n", FILE_APPEND);
-            db::update('user', $server_data, "`username`='{$username}'");
+            databaseHelper::update('user', $server_data, "`username`='{$username}'");
             return;
         }
 
@@ -60,7 +60,7 @@ $w->on_worker_start = function($worker) use ($count) {
         $data['last_message_week'] = empty($data['last_message_time']) ? 7 : intval(date("w", $data['last_message_time']));
         $data['last_message_hour'] = empty($data['last_message_time']) ? 24 : intval(date("H", $data['last_message_time']));
         $data = array_merge($data, $server_data);
-        db::update('user', $data, "`username`='{$username}'");
+        databaseHelper::update('user', $data, "`username`='{$username}'");
 
         // 采集用户详细信息 =======================================================================
         $data = [];
@@ -71,7 +71,7 @@ $w->on_worker_start = function($worker) use ($count) {
         if (empty($content)) 
         {
             file_put_contents("./data/error_timeout.log", date("Y-m-d H:i:s") . ' ' . $username."\n", FILE_APPEND);
-            db::update('user', $server_data, "`username`='{$username}'");
+            databaseHelper::update('user', $server_data, "`username`='{$username}'");
             return;
         }
 
@@ -79,12 +79,12 @@ $w->on_worker_start = function($worker) use ($count) {
         if (empty($data)) 
         {
             file_put_contents("./data/error_emptydata.log", date("Y-m-d H:i:s") . ' ' . $username." about data not exists --- \n", FILE_APPEND);
-            db::update('user', $server_data, "`username`='{$username}'");
+            databaseHelper::update('user', $server_data, "`username`='{$username}'");
             return;
         }
 
         $data = array_merge($data, $server_data);
-        db::update('user', $data, "`username`='{$username}'");
+        databaseHelper::update('user', $data, "`username`='{$username}'");
     }
 
 }; 

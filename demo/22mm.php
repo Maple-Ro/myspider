@@ -1,36 +1,33 @@
 <?php
 ini_set("memory_limit", "1024M");
-require dirname(__FILE__) . '/../src/init.php';
-
-/* Do NOT delete this comment */
-/* 不要删除这段注释 */
+require ROOT_PATH . '/include/init.php';
+use Maple\PhpSpider\PhpSpider;
 
 $configs = [
     'name' => '22',
     'domains' => [
-        'www.juemei.com',
-
+        'www.juemei.com'
     ],
-    'collect_fails'=>2,
-    'tasknum'	=>	4,
-    'save_running_state'	=>	true,
-    'scan_urls' =>[
+    'collect_fails' => 2,
+    'task_num' => 4,
+    'save_running_state' => true,
+    'scan_urls' => [
         "http://www.juemei.com/mm/sfz/",
-            "http://www.juemei.com/mm/qcmm/",
-            "http://www.juemei.com/mm/chemo/",
-            "http://www.juemei.com/mm/xiezhen/",
-            "http://www.juemei.com/mm/xinggan/",
-            "http://www.juemei.com/mm/meitui/"
+        "http://www.juemei.com/mm/qcmm/",
+        "http://www.juemei.com/mm/chemo/",
+        "http://www.juemei.com/mm/xiezhen/",
+        "http://www.juemei.com/mm/xinggan/",
+        "http://www.juemei.com/mm/meitui/"
     ],
-    'list_url_regexes' => [
+    'list_url_regex' => [
         "http://www.juemei.com/mm/sfz/index_\d+.html",
         "http://www.juemei.com/mm/qcmm/index_\d+.html",
         "http://www.juemei.com/mm/chemo/index_\d+.html",
         "http://www.juemei.com/mm/xiezhen/index_\d+.html",
         "http://www.juemei.com/mm/xinggan/index_\d+.html",
-        "http://www.juemei.com/mm/meitui/index_\d+.html",
+        "http://www.juemei.com/mm/meitui/index_\d+.html"
     ],
-    'content_url_regexes' => [
+    'content_url_regex' => [
         "http://www.juemei.com/mm/\d{6}/\d{4}.html",
         "http://www.juemei.com/mm/\d{6}/\d{4}_\d{1,2}.html"
     ],
@@ -45,26 +42,26 @@ $configs = [
 //    ),
     'export' => [
         'type' => 'db',
-        'table' => 'meinv_content',
+        'table' => 'meinv_content'
     ],
     'fields' => [
         // 标题
         [
             'name' => "name",
             'selector' => "//div[contains(@class, 'album')]//h1",
-            'required' => true,
+            'required' => true
         ],
         // 分类
         [
             'name' => "category",
             'selector' => "//div[contains(@class,'palce')]//a",
-            'required' => true,
+            'required' => true
         ],
         // 发布时间
         [
-            'name' => "addtime",
+            'name' => "add_time",
             'selector' => "//span[contains(@class,'date')]//em",
-            'required' => true,
+            'required' => true
         ],
         // 内容
         [
@@ -94,29 +91,23 @@ $configs = [
 
 $spider = new PhpSpider($configs);
 
-$spider->on_extract_field = function($fieldname, $data, $page) 
-{
-    if ($fieldname == 'name') 
-    {
+$spider->onExtractField = function (string $fieldname, array $data) {
+    if ($fieldname == 'name') {
         $data = trim(preg_replace("#\(.*?\)#", "", $data));
     }
-    if ($fieldname == 'addtime') 
-    {
+    if ($fieldname == 'add_time') {
         $data = mb_substr($data, 5, 15);
-    }
-    elseif ($fieldname == 'content') 
-    {
+    } elseif ($fieldname == 'content') {
         $contents = $data;
         $array = [];
-        foreach ($contents as $content) 
-        {
+        foreach ($contents as $content) {
             $url = $content['page_content'];
             // 以纳秒为单位生成随机数
-            $filename = uniqid().".jpg";
+            $filename = uniqid() . ".jpg";
             // 在data目录下生成图片
-            $filepath = PATH_DATA."/images/{$filename}";
+            $filePath = PATH_DATA . "/images/{$filename}";
             // 用系统自带的下载器wget下载
-            exec("wget {$url} -O {$filepath}");
+            exec("wget {$url} -O {$filePath}");
             $array[] = $filename;
         }
         $data = implode(",", $array);

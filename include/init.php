@@ -31,54 +31,22 @@ date_default_timezone_set('Asia/Shanghai');
 //核心库目录
 define('ROOT_PATH', dirname(dirname(__FILE__)).'/');
 define('PATH_DATA', ROOT_PATH."data");
-define('PATH_LIBRARY', ROOT_PATH."library");
-define('CORE', ROOT_PATH."src");
+define('SRC', ROOT_PATH . "classes/src");
 
 //系统配置
 if( file_exists( ROOT_PATH."config/inc_config.php" ) )
 {
     require ROOT_PATH."config/inc_config.php";
 }
-require CORE . '/Log.php';
-require CORE . '/util.php';
-require CORE . '/db.php';
-require CORE . '/cache.php';
+require "Loader.php";
+spl_autoload_register("\\Loader::autoload");
 
+use Maple\Utils\Utils;
 // 启动的时候生成data目录
-util::path_exists(PATH_DATA);
-util::path_exists(PATH_DATA."/lock");
-util::path_exists(PATH_DATA."/log");
-util::path_exists(PATH_DATA."/cache");
-util::path_exists(PATH_DATA."/status");
+Utils::pathExists(PATH_DATA);
+Utils::pathExists(PATH_DATA . "/lock");
+Utils::pathExists(PATH_DATA . "/log");
+Utils::pathExists(PATH_DATA . "/cache");
+Utils::pathExists(PATH_DATA . "/status");
 
-require CORE . "/worker.php";
-require CORE . "/PhpSpider.php";
 
-/**
- * 自动加载类库处理
- * @return void
- */
-function __autoload( $classname )
-{
-    $classname = preg_replace("/[^0-9a-z_]/i", '', $classname);
-    if( class_exists ( $classname ) ) {
-        return true;
-    }
-    $classfile = $classname.'.php';
-    try
-    {
-        if ( file_exists ( PATH_LIBRARY.'/'.$classfile ) )
-        {
-            require PATH_LIBRARY.'/'.$classfile;
-        }
-        else
-        {
-            throw new Exception ( 'Error: Cannot find the '.$classname );
-        }
-    }
-    catch ( Exception $e )
-    {
-        Log::error($e->getMessage().'|'.$classname);
-        exit();
-    }
-}

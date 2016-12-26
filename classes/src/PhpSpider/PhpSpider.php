@@ -2,7 +2,10 @@
 namespace Maple\PhpSpider;
 
 use Maple\Caches\RedisHelper;
+use Maple\DatabaseHelper\DatabaseHelper;
+use Maple\Exception\SpiderException;
 use Maple\HttpHelper\CurlHelper;
+use Maple\Utils\Utils;
 
 /**
  * PhpSpider - A PHP Framework For Crawler
@@ -299,19 +302,19 @@ class PhpSpider
 //        }
         //初始化配置
         self::$configs = $configs;
-        self::$configs['name'] = isset(self::$configs['name']) ?? 'phpSpider_' . uniqid();
-        self::$configs['proxy'] = isset(self::$configs['proxy']) ?? '';
-        self::$configs['proxy_auth'] = isset(self::$configs['proxy_auth']) ??'';
-        self::$configs['user_agent'] = isset(self::$configs['user_agent']) ??self::AGENT_PC;
-        self::$configs['interval'] = isset(self::$configs['interval']) ??self::INTERVAL;
-        self::$configs['timeout'] = isset(self::$configs['timeout']) ??self::TIMEOUT;
-        self::$configs['collect_fails'] = isset(self::$configs['collect_fails']) ?? self::COLLECT_FAILS;
-        self::$configs['export'] = isset(self::$configs['export']) ??[];
+        self::$configs['name'] = self::$configs['name'] ?? 'phpSpider_' . uniqid();
+        self::$configs['proxy'] = self::$configs['proxy'] ?? '';
+        self::$configs['proxy_auth'] = self::$configs['proxy_auth'] ?? '';
+        self::$configs['user_agent'] = self::$configs['user_agent'] ?? self::AGENT_PC;
+        self::$configs['interval'] = self::$configs['interval'] ?? self::INTERVAL;
+        self::$configs['timeout'] = self::$configs['timeout'] ?? self::TIMEOUT;
+        self::$configs['collect_fails'] = self::$configs['collect_fails'] ?? self::COLLECT_FAILS;
+        self::$configs['export'] = self::$configs['export'] ?? [];
 
         // csv、sql、db
-        self::$exportType = isset(self::$configs['export']['type']) ??'';
-        self::$exportFile = isset(self::$configs['export']['file']) ?? '';
-        self::$exportTable = isset(self::$configs['export']['table']) ??'';
+        self::$exportType = self::$configs['export']['type'] ?? '';
+        self::$exportFile = self::$configs['export']['file'] ?? '';
+        self::$exportTable = self::$configs['export']['table'] ?? '';
 
         // 是否设置了并发任务数，并且大于1
         if (isset(self::$configs['task_num']) && self::$configs['task_num'] > 1) {
@@ -412,21 +415,21 @@ class PhpSpider
      * @param array $options
      * @return bool|void
      */
-    public function add_url(string $url, array $options = [])
+    public function addUrl(string $url, array $options = [])
     {
         // 投递状态
         $status = false;
         $link = [
             'url' => $url,
             'url_type' => '',
-            'method' => isset($options['method']) ?? 'get',
-            'headers' => isset($options['headers']) ?? self::$headers,
-            'params' => isset($options['params']) ?? [],
-            'context_data' => isset($options['context_data']) ?? '',
-            'proxy' => isset($options['proxy']) ??self::$configs['proxy'],
-            'proxy_auth' => isset($options['proxy_auth']) ?? self::$configs['proxy_auth'],
-            'collect_count' => isset($options['collect_count']) ?? 0,
-            'collect_fails' => isset($options['collect_fails']) ?? self::$configs['collect_fails'],
+            'method' => $options['method']?? 'get',
+            'headers' => $options['headers'] ?? self::$headers,
+            'params' => $options['params'] ?? [],
+            'context_data' => $options['context_data'] ?? '',
+            'proxy' => $options['proxy'] ?? self::$configs['proxy'],
+            'proxy_auth' => $options['proxy_auth'] ?? self::$configs['proxy_auth'],
+            'collect_count' => $options['collect_count'] ?? 0,
+            'collect_fails' => $options['collect_fails'] ?? self::$configs['collect_fails'],
         ];
 
         if (!empty(self::$configs['list_url_regex'])) {
@@ -434,13 +437,13 @@ class PhpSpider
                 if (preg_match("#{$regex}#i", $url) && !$this->isCollectUrl($url)) {
                     log::debug(date("H:i:s") . " 发现列表网页：{$url}");
                     $link['url_type'] = 'list_page';
-                    $status = $this->queueLeftPush($link);
+                    $status = $this->queueLeftPush($link);//to queue
                 }
             }
         }
 
-        if (!empty(self::$configs['content_url_reg'])) {
-            foreach (self::$configs['content_url_reg'] as $regex) {
+        if (!empty(self::$configs['content_url_regex'])) {
+            foreach (self::$configs['content_url_regex'] as $regex) {
                 if (preg_match("#{$regex}#i", $url) && !$this->isCollectUrl($url)) {
                     log::debug(date("H:i:s") . " 发现内容网页：{$url}");
                     $link['url_type'] = 'content_page';
@@ -449,8 +452,8 @@ class PhpSpider
             }
         }
 
-        if (!empty(self::$configs['attachment_url_reg'])) {
-            foreach (self::$configs['attachment_url_reg'] as $regex) {
+        if (!empty(self::$configs['attachment_url_regex'])) {
+            foreach (self::$configs['attachment_url_regex'] as $regex) {
                 if (preg_match("#{$regex}#i", $url) && !$this->isCollectUrl($url)) {
                     log::debug(date("H:i:s") . " 发现网页文件：{$url}");
                     $link['url_type'] = 'attachment_file';
@@ -464,7 +467,7 @@ class PhpSpider
         } else {
             $msg = "URL not match content_url_reg and list_url_reg, {$url}\n";
         }
-        return $status;
+        Log::add($msg);
     }
 
 
@@ -472,28 +475,29 @@ class PhpSpider
      * 展示启动界面
      * @return void
      */
-    public function display_ui()
+    public function displayUi()
     {
-        $loadavg = sys_getloadavg();
-        foreach ($loadavg as $k => $v) {
-            $loadavg[$k] = round($v, 2);
+        $avg = sys_getloadavg();
+        foreach ($avg as $k => $v) {
+            $avg[$k] = round($v, 2);
         }
         $display_str = "\033[1A\n\033[K-----------------------------\033[47;30m PHPSPIDER \033[0m-----------------------------\n\033[0m";
         $display_str .= 'PHPSpider version:' . self::VERSION . "          PHP version:" . PHP_VERSION . "\n";
-        $display_str .= 'start time:' . date('Y-m-d H:i:s', self::$timeStart) . '   run ' . floor((time() - self::$timeStart) / (24 * 60 * 60)) . ' days ' . floor(((time() - self::$timeStart) % (24 * 60 * 60)) / (60 * 60)) . " hours " . floor(((time() - self::$timeStart) % (24 * 60 * 60)) / 60) . " minutes   \n";
-        $display_str .= 'load average: ' . implode(", ", $loadavg) . "\n";
+        $display_str .= 'start time:' . date('Y-m-d H:i:s', self::$timeStart) . '   run ' . floor((time() - self::$timeStart) / (24 * 60 * 60)) . ' days ' .
+            floor(((time() - self::$timeStart) % (24 * 60 * 60)) / (60 * 60)) . " hours " . floor(((time() - self::$timeStart) % (24 * 60 * 60)) / 60) . " minutes   \n";
+        $display_str .= 'load average: ' . implode(", ", $avg) . "\n";
         $display_str .= "document: https://doc.phpspider.org\n";
         $display_str .= "-------------------------------\033[47;30m TASKS \033[0m-------------------------------\n";
 
         $display_str .= "\033[47;30mtaskid\033[0m" . str_pad('', self::$taskIdLength + 2 - strlen('taskid')) .
             "\033[47;30mpid\033[0m" . str_pad('', self::$pidLength + 2 - strlen('pid')) .
             "\033[47;30mmem\033[0m" . str_pad('', self::$memLength + 2 - strlen('mem')) .
-            "\033[47;30mcollect succ\033[0m" . str_pad('', self::$urlsLength + 2 - strlen('collect succ')) .
+            "\033[47;30mcollect success\033[0m" . str_pad('', self::$urlsLength + 2 - strlen('collect succ')) .
             "\033[47;30mcollect fail\033[0m" . str_pad('', self::$urlsLength + 2 - strlen('collect fail')) .
             "\033[47;30mspeed\033[0m" . str_pad('', self::$speedLength + 2 - strlen('speed')) .
             "\n";
 
-        $display_str .= $this->display_process_ui();
+        $display_str .= $this->displayProcessUi();
 
         $display_str .= "---------------------------\033[47;30m COLLECT STATUS \033[0m--------------------------\n";
 
@@ -507,8 +511,8 @@ class PhpSpider
         $collect = $this->countCollectUrl();
         $collected = $this->countCollectedUrl();
         $remain = $collect - $collected;
-        $queue = $this->queue_lsize();
-        $fields = $this->get_fields_num();
+        $queue = $this->queueLSize();
+        $fields = $this->getFieldsNum();
         $display_str .= str_pad($collect, 16);
         $display_str .= str_pad($collected, 14);
         $display_str .= str_pad($remain, 15);
@@ -517,7 +521,7 @@ class PhpSpider
         $display_str .= "\n";
 
         // 清屏
-        $this->clear_screen();
+        $this->clearScreen();
         // 返回到第一行,第一列
         //echo "\033[0;0H";
         $display_str .= "---------------------------------------------------------------------\n";
@@ -536,7 +540,10 @@ class PhpSpider
         //}
     }
 
-    public function display_process_ui()
+    /**
+     * @return string
+     */
+    public function displayProcessUi()
     {
         $mem = round(memory_get_usage(true) / (1024 * 1024), 2) . "MB";
         $use_time = microtime(true) - self::$timeStart;
@@ -545,22 +552,22 @@ class PhpSpider
             'id' => self::$taskId,
             'pid' => self::$taskPid,
             'mem' => $mem,
-            'collect_succ' => self::$collectSuccess,
+            'collect_success' => self::$collectSuccess,
             'collect_fail' => self::$collectFailure,
             'speed' => $speed,
-            //'status' => true,
+            'status' => true
         );
         // "\033[32;40m [OK] \033[0m"
         $display_str = str_pad($task['id'], self::$taskIdLength + 2) .
             str_pad($task['pid'], self::$pidLength + 2) .
             str_pad($task['mem'], self::$memLength + 2) .
-            str_pad($task['collect_succ'], self::$urlsLength + 2) .
+            str_pad($task['collect_success'], self::$urlsLength + 2) .
             str_pad($task['collect_fail'], self::$urlsLength + 2) .
             str_pad($task['speed'], self::$speedLength + 2) .
             "\n";
 
         for ($i = 2; $i <= self::$taskNum; $i++) {
-            $json = util::get_file(PATH_DATA . "/status/" . $i);
+            $json = Utils::get_file(PATH_DATA . "/status/" . $i);
             if (empty($json)) {
                 continue;
             }
@@ -571,7 +578,7 @@ class PhpSpider
             $display_str .= str_pad($task['id'], self::$taskIdLength + 2) .
                 str_pad($task['pid'], self::$pidLength + 2) .
                 str_pad($task['mem'], self::$memLength + 2) .
-                str_pad($task['collect_succ'], self::$urlsLength + 2) .
+                str_pad($task['collect_success'], self::$urlsLength + 2) .
                 str_pad($task['collect_fail'], self::$urlsLength + 2) .
                 str_pad($task['speed'], self::$speedLength + 2) .
                 "\n";
@@ -581,7 +588,7 @@ class PhpSpider
         return $display_str;
     }
 
-    public function clear_screen()
+    public function clearScreen()
     {
         array_map(create_function('$a', 'print chr($a);'), array(27, 91, 72, 27, 91, 50, 74));
     }
@@ -605,25 +612,25 @@ class PhpSpider
         // 多任务需要pcntl扩展支持
         if (self::$taskNum > 1) {
             if (!function_exists('pcntl_fork')) {
-                log::error("When the task number greater than 1 need pnctl extension");
-                exit;
+                log::error("When the task number greater than 1 need pcntl extension");
+                exit; //todo
             }
         }
 
         // 保存运行状态需要Redis支持
-        if (self::$saveRunningState && !cls_redis::check()) {
-            log::error("Save the running state need Redis support，Error: " . cls_redis::$error . "\n\nPlease check the configuration file config/inc_config.php\n");
-            exit;
+        if (self::$saveRunningState && !RedisHelper::check()) {
+            log::error("Save the running state need Redis support，Error: " . RedisHelper::$error . "\n\nPlease check the configuration file config/inc_config.php\n");
+            exit; //todo
         }
 
         // 多任务需要Redis支持
-        if (self::$taskNum > 1 && !cls_redis::check()) {
-            log::error("Multitasking need Redis support，Error: " . cls_redis::$error . "\n\nPlease check the configuration file config/inc_config.php\n");
-            exit;
+        if (self::$taskNum > 1 && !RedisHelper::check()) {
+            log::error("Multitasking need Redis support，Error: " . RedisHelper::$error . "\n\nPlease check the configuration file config/inc_config.php\n");
+            exit; //todo
         }
 
         // 验证导出
-        $this->auth_export();
+        $this->authExport();
 
         // 检查 scan_urls 
         if (empty(self::$configs['scan_urls'])) {
@@ -645,7 +652,7 @@ class PhpSpider
 
         if (log::$log_show) {
             log::info("\n[" . self::$configs['name'] . "爬虫] 开始爬行...\n");
-            log::warn("!开发文档：\nhttps://doc.phpspider.org\n");
+            log::warn("!开发文档：\n https://doc.phpspider.org\n");
             log::warn("爬虫任务数：" . self::$taskNum . "\n");
         }
 
@@ -668,18 +675,18 @@ class PhpSpider
         if (self::$taskNum > 1) {
             //task进程从1开始，0被master进程所使用
             for ($i = 2; $i <= self::$taskNum; $i++) {
-                $this->fork_one_task($i);
+                $this->forkOneTask($i);
                 log::info("\n[" . "开启进程{$i}...\n");
             }
 
             // 不保留运行状态
             if (!self::$saveRunningState) {
                 // 清空redis里面的数据
-                $this->clear_redis();
+                $this->clear();
             }
 
             // 设置主任务为未准备状态，堵塞子进程
-            $this->set_taskmaster_status(0);
+            $this->setTaskMasterStatus(0);
         }
 
         foreach (self::$configs['scan_urls'] as $url) {
@@ -698,43 +705,43 @@ class PhpSpider
             $this->queueLeftPush($link);
         }
 
-        while ($this->queue_lsize()) {
+        while ($this->queueLSize()) {
             // 抓取页面
-            $this->collect_page();
+            $this->collectPage();
 
             // 多任务下主任务未准备就绪
             if (self::$taskNum > 1 && !self::$taskMasterStatus) {
                 // 如果队列中的网页比任务数多，设置主进程为准备好状态，子任务开始采集
-                if ($this->queue_lsize() > self::$taskNum) {
+                if ($this->queueLSize() > self::$taskNum) {
                     log::warn("主任务准备就绪...\n");
                     // 给主任务自己用的
                     self::$taskMasterStatus = true;
                     // 给子任务判断用的
-                    $this->set_taskmaster_status(1);
+                    $this->setTaskMasterStatus(1);
                 }
             }
 
             // 如果不显示日志，就显示控制面板
             if (!log::$log_show) {
-                $this->display_ui();
+                $this->displayUi();
             }
         }
 
         log::info("爬取完成\n");
 
-        $spider_time_run = util::time2second(intval(microtime(true) - self::$timeStart));
+        $spider_time_run = Utils::time2second(intval(microtime(true) - self::$timeStart));
         log::info("爬虫运行时间：{$spider_time_run}\n");
 
         $count_collected_url = $this->countCollectedUrl();
         log::info("总共抓取网页：{$count_collected_url} 个\n\n");
 
         if (self::$taskNum > 1) {
-            $this->set_taskmaster_status(1);
+            $this->setTaskMasterStatus(1);
         }
 
         // 最后:多任务下不保留运行状态，清空redis数据
         if (self::$taskNum > 1 && !self::$saveRunningState) {
-            $this->clear_redis();
+            $this->clear();
         }
     }
 
@@ -745,41 +752,43 @@ class PhpSpider
      * @author seatle <seatle@foxmail.com>
      * @created time :2016-10-02 23:37
      */
-    public function auth_export()
+    public function authExport()
     {
         // 如果设置了导出选项
         if (!empty(self::$configs['export'])) {
             if (self::$exportType == 'csv') {
                 if (empty(self::$exportFile)) {
                     log::error("Export data into CSV files need to Set the file path.");
-                    exit;
+                    exit; //TODO
                 }
             } elseif (self::$exportType == 'sql') {
                 if (empty(self::$exportFile)) {
                     log::error("Export data into SQL files need to Set the file path.");
-                    exit;
+                    exit;//TODO
                 }
             } elseif (self::$exportType == 'db') {
                 if (!function_exists('mysqli_connect')) {
                     log::error("Export data to a database need Mysql support，Error: Unable to load mysqli extension.\n");
-                    exit;
+                    exit; //TODO
                 }
 
                 if (empty($GLOBALS['config']['db'])) {
-                    log::error("Export data to a database need Mysql support，Error: You not set a config array for connect.\n\nPlease check the configuration file config/inc_config.php");
-                    exit;
+                    log::error("Export data to a database need Mysql support，Error: You not set a config array for connect.
+                    \n\nPlease check the configuration file config/inc_config.php");
+                    exit; //TODO
                 }
 
                 $config = $GLOBALS['config']['db'];
                 @mysqli_connect($config['host'], $config['user'], $config['pass'], $config['name'], $config['port']);
                 if (mysqli_connect_errno()) {
-                    log::error("Export data to a database need Mysql support，Error: " . mysqli_connect_error() . " \n\nPlease check the configuration file config/inc_config.php");
-                    exit;
+                    log::error("Export data to a database need Mysql support，Error: " . mysqli_connect_error() . " 
+                    \n\nPlease check the configuration file config/inc_config.php");
+                    exit; //TODO
                 }
 
-                if (!db::table_exists(self::$exportTable)) {
+                if (!DatabaseHelper::tableExists(self::$exportTable)) {
                     log::error("Table " . self::$exportTable . " does not exist\n");
-                    exit;
+                    exit; //TODO
                 }
             }
         }
@@ -787,25 +796,21 @@ class PhpSpider
 
     /**
      * 爬取页面
-     *
-     * @param mixed $collect_url 要抓取的链接
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @return bool
      */
-    public function collect_page()
+    public function collectPage()
     {
         $count_collect_url = $this->countCollectUrl();
         log::info(date("H:i:s") . " 发现抓取网页：{$count_collect_url} 个\n");
 
-        $queue_lsize = $this->queue_lsize();
+        $queue_lsize = $this->queueLSize();
         log::info("等待抓取网页：{$queue_lsize} 个\n");
 
         $count_collected_url = $this->countCollectedUrl();
         log::info("已经抓取网页：{$count_collected_url} 个\n");
 
         // 先进先出
-        $link = $this->queue_rpop();
+        $link = $this->queueRPop();
         $url = $link['url'];
 
         // 标记为已爬取网页
@@ -817,39 +822,39 @@ class PhpSpider
         if ($link['url_type'] == 'attachment_file') {
             if ($this->onAttachmentFile) {
                 $pathinfo = pathinfo($url);
-                $filetype = isset($pathinfo['extension']) ? $pathinfo['extension'] : '';
+                $filetype = $pathinfo['extension'] ?? '';
                 call_user_func($this->onAttachmentFile, $url, $filetype, $this);
             }
             return true;
         }
 
-        $html = $this->request_url($url, $link);
+        $html = $this->requestUrl($url, $link);
         if (!$html) {
-            return false;
+            return false; //todo
         }
 
         if ($this->isAntiSpider) {
             $is_anti_spider = call_user_func($this->isAntiSpider, $url, $html);
             // 如果在回调函数里面判断被反爬虫并且返回true
             if ($is_anti_spider) {
-                return false;
+                return false; //todo
             }
         }
 
         // 当前正在爬取的网页页面的对象
-        $page = array(
+        $page = [
             'url' => $url,
             'raw' => $html,
-            'request' => array(
+            'request' => [
                 'url' => $url,
                 'method' => $link['method'],
                 'headers' => $link['headers'],
                 'params' => $link['params'],
                 'context_data' => $link['context_data'],
                 'collect_count' => $link['collect_count'],
-                'collect_fails' => $link['collect_fails'],
-            ),
-        );
+                'collect_fails' => $link['collect_fails']
+            ]
+        ];
 
         // 在一个网页下载完成之后调用. 主要用来对下载的网页进行处理.
         if ($this->onDownloadPage) {
@@ -887,47 +892,46 @@ class PhpSpider
         $time_run = round(microtime(true) - $page_time_start, 3);
         log::info(date("H:i:s") . " 网页下载成功：{$url}\t耗时: {$time_run} 秒\n");
 
-        $spider_time_run = util::time2second(intval(microtime(true) - self::$timeStart));
+        $spider_time_run = Utils::time2second(intval(microtime(true) - self::$timeStart));
         log::info("爬虫运行时间：{$spider_time_run}\n");
 
         // on_scan_page、on_list_pag、on_content_page 返回false表示不需要再从此网页中发现待爬url
         if ($is_find_url) {
             // 分析提取HTML页面中的URL
-            $this->get_html_urls($html, $url);
+            $this->getHtmlUrls($html, $url);
         }
 
         // 如果是内容页，分析提取HTML页面中的字段
         // 列表页也可以提取数据的，source_type: urlcontext，未实现
         if ($link['url_type'] == 'content_page') {
-            $this->get_html_fields($html, $url, $page);
+            $this->getHtmlFields($html, $url, $page);
         }
 
         // 爬虫爬取每个网页的时间间隔，单位：秒
-        if (!empty(self::$configs['interval'])) {
-            sleep(self::$configs['interval']);
-        } // 默认睡眠100毫秒，太快了会被认为是ddos
-        else {
-            usleep(100000);
-        }
+//        if (!empty(self::$configs['interval'])) {
+//            sleep(self::$configs['interval']);
+//        } // 默认睡眠100毫秒，太快了会被认为是ddos
+//        else {
+//            usleep(100000);
+//        }
+        $interval = self::$configs['interval'] ?? 1;
+        sleep($interval);
     }
 
     /**
      * 下载网页，得到网页内容
-     *
-     * @param mixed $url
-     * @param mixed $options
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @param string $url
+     * @param array $options
+     * @return null|string
+     * @throws SpiderException
      */
-    public function request_url($url, $options = [])
+    public function requestUrl(string $url, $options = [])
     {
         //$url = "http://www.qiushibaike.com/article/117568316";
 
         $pattern = "/\b(([\w-]+:\/\/?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|\/)))/";
         if (!preg_match($pattern, $url)) {
-            log::error("你所请求的URL({$url})不是有效的HTTP地址");
-            exit;
+            throw new SpiderException('你所请求的URL({$url})不是有效的HTTP地址');
         }
 
         $parse_url_arr = parse_url($url);
@@ -935,30 +939,30 @@ class PhpSpider
 
         $link = array(
             'url' => $url,
-            'url_type' => isset($options['url_type']) ? $options['url_type'] : '',
-            'method' => isset($options['method']) ? $options['method'] : 'get',
-            'headers' => isset($options['headers']) ? $options['headers'] : self::$headers,
-            'params' => isset($options['params']) ? $options['params'] : [],
-            'context_data' => isset($options['context_data']) ? $options['context_data'] : '',
-            'proxy' => isset($options['proxy']) ? $options['proxy'] : self::$configs['proxy'],
-            'proxy_auth' => isset($options['proxy_auth']) ? $options['proxy_auth'] : self::$configs['proxy_auth'],
-            'collect_count' => isset($options['collect_count']) ? $options['collect_count'] : 0,
-            'collect_fails' => isset($options['collect_fails']) ? $options['collect_fails'] : self::$configs['collect_fails'],
+            'url_type' => $options['url_type'] ?? '',
+            'method' => $options['method'] ?? 'get',
+            'headers' => $options['headers'] ?? self::$headers,
+            'params' => $options['params'] ?? [],
+            'context_data' => $options['context_data'] ?? '',
+            'proxy' => $options['proxy'] ?? self::$configs['proxy'],
+            'proxy_auth' => $options['proxy_auth'] ?? self::$configs['proxy_auth'],
+            'collect_count' => $options['collect_count'] ?? 0,
+            'collect_fails' => $options['collect_fails'] ?? self::$configs['collect_fails'],
         );
 
         // 如果定义了获取附件回调函数，直接拦截了
         if ($this->onAttachmentFile) {
-            $fileinfo = $this->is_attachment_file($url);
+            $fileInfo = $this->isAttachmentFile($url);
             // 如果不是html
-            if (!empty($fileinfo)) {
-                log::debug("发现{$fileinfo['fileext']}文件：{$url}");
-                call_user_func($this->onAttachmentFile, $url, $fileinfo);
+            if (!empty($fileInfo)) {
+                log::debug("发现{$fileInfo['fileext']}文件：{$url}");
+                call_user_func($this->onAttachmentFile, $url, $fileInfo);
                 return false;
             }
         }
 
-        cls_curl::set_timeout(self::$configs['timeout']);
-        cls_curl::set_useragent(self::$configs['user_agent']);
+        CurlHelper::setTimeout(self::$configs['timeout']);
+        CurlHelper::setUserAgent(self::$configs['user_agent']);
 
         // 全局Cookie + 域名下的Cookie
         $cookies = self::$cookies;
@@ -973,37 +977,37 @@ class PhpSpider
                 $cookie_arr[] = $key . "=" . $value;
             }
             $cookies = implode("; ", $cookie_arr);
-            cls_curl::set_cookie($cookies);
+            CurlHelper::setCookie($cookies);
         }
 
         // 是否设置了代理
         if (!empty($link['proxy'])) {
-            cls_curl::set_proxy($link['proxy'], $link['proxy_auth']);
+            CurlHelper::setProxy($link['proxy'], $link['proxy_auth']);
             // 自动切换IP
-            cls_curl::set_headers(array('Proxy-Switch-Ip: yes'));
+            CurlHelper::setHeaders(array('Proxy-Switch-Ip: yes'));
         }
 
         // 如何设置了 HTTP Headers
         if (!empty($link['headers'])) {
-            cls_curl::set_headers($link['headers']);
+            CurlHelper::setHeaders($link['headers']);
         }
 
         // 不能通过 curl_setopt($ch, CURLOPT_NOBODY, 1) 只获取HTTP Header
         // 因为POST数据会失效
         // 即想POST过去，返回的http又只想取header部分是不行的
-        cls_curl::set_http_raw(true);
+        CurlHelper::setHttpRaw(true);
 
         // 如果设置了附加的数据，如json和xml，就直接发附加的数据,php端可以用 file_get_contents("php://input"); 获取
-        $params = empty($link['context_data']) ? $link['params'] : $link['context_data'];
+        $params = $link['context_data'] ?? $link['params'];
         $method = strtolower($link['method']);
-        $html = cls_curl::$method($url, $params);
+        $html = CurlHelper::$method($url, $params);
         //var_dump($html);exit;
 
         // 对于登录成功后302跳转的，Cookie实际上存在body而不在header，header只有一句：HTTP/1.1 100 Continue
         // 为了兼容301和301这些乱七八糟的，还是header+body一起匹配吧
         // 解析Cookie并存入 self::$cookies 方便调用
         preg_match_all("/.*?Set\-Cookie: ([^\r\n]*)/i", $html, $matches);
-        $cookies = empty($matches[1]) ? [] : $matches[1];
+        $cookies = $matches[1] ?? [];
 
         // 解析到Cookie
         if (!empty($cookies)) {
@@ -1020,7 +1024,7 @@ class PhpSpider
                     continue;
                 }
                 // 过滤掉domain路径
-                if (in_array(strtolower($cookie_name), array('path', 'domain', 'expires', 'max-age'))) {
+                if (in_array(strtolower($cookie_name), ['path', 'domain', 'expires', 'max-age'])) {
                     continue;
                 }
                 // 从URL得到的Cookie不要放入全局，放到对应的域名下即可
@@ -1029,31 +1033,36 @@ class PhpSpider
             }
         }
 
-        $http_code = cls_curl::get_http_code();
+        $http_code = CurlHelper::getHttpCode();
 
-        if ($http_code != 200) {
-            // 如果是301、302跳转，抓取跳转后的网页内容
-            if ($http_code == 301 || $http_code == 302) {
-                $info = cls_curl::get_info();
-                $url = $info['redirect_url'];
-                $html = $this->request_url($url, $options);
-
-                // 获取跳转后的地址扔到队列头部去，可以立刻采集
-                //$info = cls_curl::get_info();
-                //$link['url'] = $info['redirect_url'];
-                //$this->queue_rpush($link);
-                //$this->log("网页下载失败：{$url}\n", 'error');
-                //$this->log("HTTP CODE：{$http_code} 网页{$http_code}跳转\n", 'warn');
-            } else {
-                if ($http_code == 404) {
+        if ($http_code !== 200) {
+            switch ($http_code) {
+                // 如果是301、302跳转，抓取跳转后的网页内容
+                case 301:
+                case 302:
+                    $info = CurlHelper::getInfo();
+                    $url = $info['redirect_url'];
+                    $html = $this->requestUrl($url, $options);
+                    // 获取跳转后的地址扔到队列头部去，可以立刻采集
+                    //$info = cls_curl::get_info();
+                    //$link['url'] = $info['redirect_url'];
+                    //$this->queue_rpush($link);
+                    //$this->log("网页下载失败：{$url}\n", 'error');
+                    //$this->log("HTTP CODE：{$http_code} 网页{$http_code}跳转\n", 'warn');
+                    break;
+                case 404:
                     log::error(date("H:i:s") . " 网页下载失败：{$url}\n");
                     log::error(date("H:i:s") . " HTTP CODE：{$http_code} 网页不存在\n");
-                } elseif ($http_code == 407) {
+                    break;
+                case 407:
                     // 扔到队列头部去，继续采集
                     $this->queueRightPush($link);
                     log::error(date("H:i:s") . " 网页下载失败：{$url}\n");
                     log::error(date("H:i:s") . " 代理服务器验证失败，请检查代理服务器设置\n");
-                } elseif ($http_code == 502 || $http_code == 503 || $http_code == 0) {
+                    break;
+                case 0:
+                case 502:
+                case 503:
                     // 采集次数加一
                     $link['collect_count']++;
                     // 抓取次数 小于 允许抓取失败次数
@@ -1063,13 +1072,14 @@ class PhpSpider
                     }
                     log::error(date("H:i:s") . " 网页下载失败：{$url} 失败次数：{$link['collect_count']}\n");
                     log::error(date("H:i:s") . " HTTP CODE：{$http_code} 服务器过载\n");
-                } else {
+                    break;
+                default:
                     log::error(date("H:i:s") . " 网页下载失败：{$url}\n");
                     log::error(date("H:i:s") . " HTTP CODE：{$http_code}\n");
-                }
-                self::$collectFailure++;
-                return false;
+                    break;
             }
+            self::$collectFailure++;
+            return null; //TODO think more!!!
         }
         self::$collectSuccess++;
         //print_r(self::$domain_cookies);
@@ -1090,13 +1100,11 @@ class PhpSpider
     }
 
     /**
-     * 判断是否附件文件
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * 判断是否附件文件，并返回文件信息
+     * @param string $url
+     * @return array
      */
-    public function is_attachment_file($url)
+    public function isAttachmentFile(string $url): array
     {
         $mime_types = $GLOBALS['config']['mimetype'];
         $mime_types_flip = array_flip($mime_types);
@@ -1108,11 +1116,11 @@ class PhpSpider
         // 存在文件后缀并且是配置里面的后缀
         if (!empty($fileext) && isset($mime_types_flip[$fileext])) {
             stream_context_set_default(
-                array(
-                    'http' => array(
+                [
+                    'http' => [
                         'method' => 'HEAD'
-                    )
-                )
+                    ]
+                ]
             );
             // 代理和Cookie以后实现，方法和 file_get_contents 一样 使用 stream_context_create 设置
             $headers = get_headers($url, 1);
@@ -1121,19 +1129,19 @@ class PhpSpider
                 $headers = get_headers($url, 1);
             }
             //print_r($headers);
-            $fileinfo = array(
-                'basename' => isset($pathinfo['basename']) ? $pathinfo['basename'] : '',
-                'filename' => isset($pathinfo['filename']) ? $pathinfo['filename'] : '',
-                'fileext' => isset($pathinfo['extension']) ? $pathinfo['extension'] : '',
-                'filesize' => isset($headers['Content-Length']) ? $headers['Content-Length'] : 0,
+            $fileinfo = [
+                'basename' => $pathinfo['basename'] ?? '',
+                'filename' => $pathinfo['filename'] ?? '',
+                'fileext' => $pathinfo['extension'] ?? '',
+                'filesize' => $headers['Content-Length'] ?? 0,
                 'atime' => isset($headers['Date']) ? strtotime($headers['Date']) : time(),
                 'mtime' => isset($headers['Last-Modified']) ? strtotime($headers['Last-Modified']) : time(),
-            );
+            ];
 
             $mime_type = 'html';
-            $content_type = isset($headers['Content-Type']) ? $headers['Content-Type'] : '';
+            $content_type = $headers['Content-Type'] ?? '';
             if (!empty($content_type)) {
-                $mime_type = isset($GLOBALS['config']['mimetype'][$content_type]) ? $GLOBALS['config']['mimetype'][$content_type] : $mime_type;
+                $mime_type = $GLOBALS['config']['mimetype'][$content_type] ?? $mime_type;
             }
             $mime_types_flip = array_flip($mime_types);
             // 判断一下是不是文件名被加什么后缀了，比如 http://www.xxxx.com/test.jpg?token=xxxxx
@@ -1147,14 +1155,11 @@ class PhpSpider
 
     /**
      * 分析提取HTML页面中的URL
-     *
-     * @param mixed $html HTML内容
-     * @param mixed $collect_url 抓取的URL，用来拼凑完整页面的URL
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @param string $html
+     * @param string $collect_url
+     * @throws SpiderException
      */
-    public function get_html_urls($html, $collect_url)
+    public function getHtmlUrls(string $html, string $collect_url)
     {
         //--------------------------------------------------------------------------------
         // 正则匹配出页面中的URL
@@ -1165,10 +1170,10 @@ class PhpSpider
         //--------------------------------------------------------------------------------
         // 过滤和拼凑URL
         //--------------------------------------------------------------------------------
-        // 去除重复的RUL
+        // 去除重复的URL
         $urls = array_unique($urls);
         foreach ($urls as $k => $url) {
-            $val = $this->get_complete_url($url, $collect_url);
+            $val = $this->getCompleteUrl($url, $collect_url);
             if ($val) {
                 $urls[$k] = $val;
             } else {
@@ -1177,40 +1182,33 @@ class PhpSpider
         }
 
         if (empty($urls)) {
-            return false;
+            throw new SpiderException($urls . ' is empty!'); //TODO
         }
 
         //--------------------------------------------------------------------------------
         // 把抓取到的URL放入队列
         //--------------------------------------------------------------------------------
         foreach ($urls as $url) {
-            $this->add_url($url);
+            $this->addUrl($url);
         }
     }
 
     /**
      * 获得主进程准备状态
-     *
-     * @param mixed $url
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @return bool|null|string
      */
-    public function get_taskmaster_status()
+    public function getTaskMasterStatus()
     {
-        return cls_redis::get("taskmaster_ready");
+        return RedisHelper::get("taskmaster_ready");
     }
 
     /**
      * 设置主进程准备状态
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param $status
      */
-    public function set_taskmaster_status($status)
+    public function setTaskMasterStatus($status)
     {
-        cls_redis::set("taskmaster_ready", $status);
+        RedisHelper::set("taskmaster_ready", $status);
     }
 
     /**
@@ -1220,23 +1218,23 @@ class PhpSpider
      * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-29 13:00
      */
-    public function clear_redis()
+    public function clear()
     {
         // 删除队列
-        cls_redis::del("collect_queue");
+        RedisHelper::del("collect_queue");
         // 删除采集到的field数量
-        cls_redis::del("fields_num");
+        RedisHelper::del("fields_num");
         // 删除等待采集网页缓存
-        $keys = cls_redis::keys("collect_urls-*");
+        $keys = RedisHelper::keysArray("collect_urls-*");
         foreach ($keys as $key) {
             $key = str_replace($GLOBALS['config']['redis']['prefix'] . ":", "", $key);
-            cls_redis::del($key);
+            RedisHelper::del($key);
         }
         // 删除已经采集网页缓存
-        $keys = cls_redis::keys("collected_urls-*");
+        $keys = RedisHelper::keysArray("collected_urls-*");
         foreach ($keys as $key) {
             $key = str_replace($GLOBALS['config']['redis']['prefix'] . ":", "", $key);
-            cls_redis::del($key);
+            RedisHelper::del($key);
         }
     }
 
@@ -1315,7 +1313,7 @@ class PhpSpider
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $keys = RedisHelper::keys("collected_urls-*");
+            $keys = RedisHelper::keysArray("collected_urls-*");
             $count = count($keys);
         } else {
             $count = count(self::$collectedUrls);
@@ -1432,17 +1430,14 @@ class PhpSpider
     }
 
     /**
-     * 从队列右边取出
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * 从队列右边取出link
+     * @return mixed|string
      */
-    public function queue_rpop()
+    public function queueRPop()
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $link = cls_redis::rpop("collect_queue");
+            $link = RedisHelper::rpop("collect_queue");
             $link = json_decode($link, true);
         } else {
             $link = array_shift(self::$collectQueue);
@@ -1452,88 +1447,77 @@ class PhpSpider
 
     /**
      * 队列长度
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @return int
      */
-    public function queue_lsize()
+    public function queueLSize(): int
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $lsize = cls_redis::lsize("collect_queue");
+            $size = RedisHelper::lsize("collect_queue");
         } else {
-            $lsize = count(self::$collectQueue);
+            $size = count(self::$collectQueue);
         }
-        return $lsize;
+        return $size;
     }
 
     /**
      * 提取到的field数目加一
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @return int
      */
-    public function incr_fields_num()
+    public function increaseFieldsNum(): int
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $fields_num = cls_redis::incr("fields_num");
+            $num = RedisHelper::incr("fields_num");
         } else {
             self::$fieldsNum++;
-            $fields_num = self::$fieldsNum;
+            $num = self::$fieldsNum;
         }
-        return $fields_num;
+        return $num;
     }
 
     /**
      * 提取到的field数目
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @return bool|int|null|string
      */
-    public function get_fields_num()
+    public function getFieldsNum()
     {
         // 多任务 或者 单任务但是从上次继续执行
         if (self::$taskNum > 1 || self::$saveRunningState) {
-            $fields_num = cls_redis::get("fields_num");
+            $num = RedisHelper::get("fields_num");
         } else {
-            $fields_num = self::$fieldsNum;
+            $num = self::$fieldsNum;
         }
-        return $fields_num;
+        return $num;
     }
 
     /**
      * 获得完整的连接地址
-     *
-     * @param mixed $url 要检查的URL
-     * @param mixed $collect_url 从那个URL页面得到上面的URL
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param string $url
+     * @param string $collect_url
+     * @return string
+     * @throws \Exception
      */
-    public function get_complete_url($url, $collect_url)
+    public function getCompleteUrl(string $url, string $collect_url)
     {
         $collect_parse_url = parse_url($collect_url);
 
         // 排除JavaScript的连接
         if (strpos($url, "javascript:") !== false) {
-            return false;
+            throw new \Exception('invalid url: ' . $url);
         }
 
         $cur_parse_url = parse_url($url);
 
         if (empty($cur_parse_url['path'])) {
-            return false;
+            throw new \Exception($url . "'s path is empty");
         }
 
         // 如果host不为空，判断是不是要爬取的域名
         if (!empty($cur_parse_url['host'])) {
             // 排除非域名下的url以提高爬取速度
             if (!in_array($cur_parse_url['host'], self::$configs['domains'])) {
-                return false;
+                throw new \Exception($url . " is not target domain's url");
             }
         } else {
             $url = $collect_parse_url['scheme'] . '://' . str_replace("//", "/", $collect_parse_url['host'] . "/" . $url);
@@ -1543,15 +1527,13 @@ class PhpSpider
 
     /**
      * 分析提取HTML页面中的字段
-     *
-     * @param mixed $html
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @param string $html
+     * @param string $url
+     * @param int $page
      */
-    public function get_html_fields($html, $url, $page)
+    public function getHtmlFields(string $html, string $url, int $page)
     {
-        $fields = $this->get_fields(self::$configs['fields'], $html, $url, $page);
+        $fields = $this->getFields(self::$configs['fields'], $html, $url, $page);
 
         if (!empty($fields)) {
             if ($this->onExtractPage) {
@@ -1566,19 +1548,19 @@ class PhpSpider
             }
 
             if (isset($fields) && is_array($fields)) {
-                $fields_num = $this->incr_fields_num();
+                $fields_num = $this->increaseFieldsNum();
                 log::info(date("H:i:s") . " 结果{$fields_num}：" . json_encode($fields, JSON_UNESCAPED_UNICODE) . "\n");
 
                 // 如果设置了导出选项
                 if (!empty(self::$configs['export'])) {
                     self::$exportType = isset(self::$configs['export']['type']) ? self::$configs['export']['type'] : '';
                     if (self::$exportType == 'csv') {
-                        util::put_file(self::$exportFile, util::format_csv($fields) . "\n", FILE_APPEND);
+                        Utils::put_file(self::$exportFile, Utils::format_csv($fields) . "\n", FILE_APPEND);
                     } elseif (self::$exportType == 'sql') {
-                        $sql = db::insert(self::$exportTable, $fields, true);
-                        util::put_file(self::$exportFile, $sql . ";\n", FILE_APPEND);
+                        $sql = DatabaseHelper::insert(self::$exportTable, $fields, true);
+                        Utils::put_file(self::$exportFile, $sql . ";\n", FILE_APPEND);
                     } elseif (self::$exportType == 'db') {
-                        db::insert(self::$exportTable, $fields);
+                        DatabaseHelper::insert(self::$exportTable, $fields);
                     }
                 }
             }
@@ -1588,26 +1570,24 @@ class PhpSpider
 
     /**
      * 根据配置提取HTML代码块中的字段
-     *
-     * @param mixed $confs
-     * @param mixed $html
-     * @param mixed $page
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-23 17:13
+     * @param array $configs
+     * @param string $html
+     * @param string $url
+     * @param int $page
+     * @return array
+     * @throws SpiderException
      */
-    public function get_fields($confs, $html, $url, $page)
+    public function getFields(array $configs, string $html, string $url, int $page): array
     {
         $fields = [];
-        foreach ($confs as $conf) {
+        foreach ($configs as $conf) {
             // 当前field抽取到的内容是否是有多项
-            $repeated = isset($conf['repeated']) && $conf['repeated'] ? true : false;
+            $repeated = $conf['repeated'] ?? false;
             // 当前field抽取到的内容是否必须有值
-            $required = isset($conf['required']) && $conf['required'] ? true : false;
+            $required = $conf['required'] ?? false;
 
             if (empty($conf['name'])) {
-                log::error("field的名字是空值, 请检查你的\"fields\"并添加field的名字\n");
-                exit;
+                throw new SpiderException("field的名字是空值, 请检查你的\"fields\"并添加field的名字\n");
             }
 
             $values = [];
@@ -1617,9 +1597,9 @@ class PhpSpider
                 if (isset($conf['source_type']) && $conf['source_type'] == 'attached_url') {
                     // 取出上个field的内容作为连接，内容分页是不进队列直接下载网页的
                     if (!empty($fields[$conf['attached_url']])) {
-                        $collect_url = $this->get_complete_url($url, $fields[$conf['attached_url']]);
+                        $collect_url = $this->getCompleteUrl($url, $fields[$conf['attached_url']]);
                         log::info(date("H:i:s") . " 发现内容分页：{$url}");
-                        $html = $this->request_url($collect_url);
+                        $html = $this->requestUrl($collect_url);
                         // 请求获取完分页数据后把连接删除了 
                         unset($fields[$conf['attached_url']]);
                     }
@@ -1628,9 +1608,9 @@ class PhpSpider
                 // 没有设置抽取规则的类型 或者 设置为 xpath
                 if (!isset($conf['selector_type']) || $conf['selector_type'] == 'xpath') {
                     // 返回值一定是多项的
-                    $values = $this->get_fields_xpath($html, $conf['selector'], $conf['name']);
+                    $values = $this->getFieldsXpath($html, $conf['selector'], $conf['name']);
                 } elseif ($conf['selector_type'] == 'regex') {
-                    $values = $this->get_fields_regex($html, $conf['selector'], $conf['name']);
+                    $values = $this->getFieldsRegex($html, $conf['selector'], $conf['name']);
                 }
 
                 // field不为空而且存在子配置
@@ -1639,7 +1619,7 @@ class PhpSpider
                     // 父项抽取到的html作为子项的提取内容
                     foreach ($values as $html) {
                         // 递归调用本方法，所以多少子项目都支持
-                        $child_value = $this->get_fields($conf['children'], $url, $html, $page);
+                        $child_value = $this->getFields($conf['children'], $url, $html, $page);
                         if (!empty($child_value)) {
                             $child_values[] = $child_value;
                         }
@@ -1691,22 +1671,19 @@ class PhpSpider
                 }
             }
         }
-
         return $fields;
     }
 
     /**
      * 采用xpath分析提取字段
-     *
-     * @param mixed $html
-     * @param mixed $selector
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @param string $html
+     * @param string $selector
+     * @param string $fieldname
+     * @return array
      */
-    public function get_fields_xpath($html, $selector, $fieldname)
+    public function getFieldsXpath(string $html, string $selector, string $fieldname)
     {
-        $dom = new DOMDocument();
+        $dom = new \DOMDocument();
         @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
         //libxml_use_internal_errors(true);
         //$dom->loadHTML('<?xml encoding="UTF-8">'.$html);
@@ -1717,7 +1694,7 @@ class PhpSpider
         //exit;
         //}
 
-        $xpath = new DOMXpath($dom);
+        $xpath = new \DOMXpath($dom);
         $elements = @$xpath->query($selector);
         if ($elements === false) {
             log::error("field(\"{$fieldname}\")中selector的xpath(\"{$selector}\")语法错误\n");
@@ -1752,14 +1729,12 @@ class PhpSpider
 
     /**
      * 采用正则分析提取字段
-     *
-     * @param mixed $html
-     * @param mixed $selector
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
+     * @param string $html
+     * @param string $selector
+     * @param string $fieldname
+     * @return array
      */
-    public function get_fields_regex($html, $selector, $fieldname)
+    public function getFieldsRegex(string $html, string $selector, string $fieldname): array
     {
         if (@preg_match_all($selector, $html, $out) === false) {
             log::error("field(\"{$fieldname}\")中selector的regex(\"{$selector}\")语法错误\n");
@@ -1785,10 +1760,14 @@ class PhpSpider
      * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
-    public function get_fields_css($html, $selector, $fieldname)
+    public function getFieldsCss($html, $selector, $fieldname)
     {
+        //TODO to be finished
     }
 
+    /**
+     * TODO REWRITE???
+     */
     public function parseCommand()
     {
         // 检查运行命令的参数
@@ -1802,7 +1781,7 @@ class PhpSpider
         $command = trim($argv[1]);
 
         // 子命令，目前只支持-d
-        $command2 = isset($argv[2]) ? $argv[2] : '';
+        $command2 = $argv[2] ?? '';
 
         //// 检查主进程是否在运行
         //$master_pid = @file_get_contents(self::$pid_file);
@@ -1823,10 +1802,10 @@ class PhpSpider
 
         // 根据命令做相应处理
         switch ($command) {
-            // 启动 phpspider
+            // 启动 php spider
             case 'start':
                 break;
-            // 显示 phpspider 运行状态
+            // 显示 php spider 运行状态
             case 'status':
                 exit(0);
             case 'stop':
@@ -1837,8 +1816,7 @@ class PhpSpider
         }
     }
 
-
-    public function fork_one_task(int $taskId)
+    public function forkOneTask(int $taskId)
     {
         $pid = pcntl_fork();
 
@@ -1857,16 +1835,16 @@ class PhpSpider
             // sleep 1秒，等待主任务设置状态
             sleep(1);
             // 第一次先判断主进程准备好没有
-            while (!$this->get_taskmaster_status()) {
+            while (!$this->getTaskMasterStatus()) {
                 log::warn("任务" . self::$taskId . "等待中...\n");
                 sleep(1);
             }
 
-            while ($this->queue_lsize()) {
+            while ($this->queueLSize()) {
                 // 如果队列中的网页比任务数多，子任务可以采集
-                if ($this->queue_lsize() > self::$taskNum) {
+                if ($this->queueLSize() > self::$taskNum) {
                     // 抓取页面
-                    $this->collect_page();
+                    $this->collectPage();
                 } // 队列中网页太少，就都给主进程采集好了
                 else {
                     log::warn("任务" . self::$taskId . "等待中...\n");
@@ -1877,15 +1855,15 @@ class PhpSpider
                 $mem = round(memory_get_usage(true) / (1024 * 1024), 2) . "MB";
                 $use_time = microtime(true) - self::$timeStart;
                 $speed = round((self::$collectSuccess + self::$collectFailure) / $use_time, 2) . "/s";
-                $status = array(
+                $status = [
                     'id' => self::$taskId,
                     'pid' => self::$taskPid,
                     'mem' => $mem,
-                    'collect_succ' => self::$collectSuccess,
+                    'collect_success' => self::$collectSuccess,
                     'collect_fail' => self::$collectFailure,
                     'speed' => $speed,
-                );
-                util::put_file(PATH_DATA . "/status/" . self::$taskId, json_encode($status));
+                ];
+                Utils::put_file(PATH_DATA . "/status/" . self::$taskId, json_encode($status));
             }
 
             // 这里用0表示正常退出
