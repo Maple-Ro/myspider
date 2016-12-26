@@ -1,6 +1,6 @@
 <?php
 ini_set("memory_limit", "1024M");
-require ROOT_PATH . '/include/init.php';
+require '../include/init.php';
 use Maple\PhpSpider\PhpSpider;
 
 $configs = [

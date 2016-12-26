@@ -22,51 +22,43 @@ class Utils
      * {
      *     echo "process has been locked\n";
      * }
-     * 
-     * @param mixed $lock_name
+     * @param string $lock_name
      * @param int $lock_timeout
-     * @return void
-     * @author seatle <seatle@foxmail.com> 
-     * @created time :2016-02-18 14:28
+     * @return bool
      */
-    public static function lock($lock_name, $lock_timeout = 600)
+    public static function lock(string $lock_name, int $lock_timeout = 600)
     {
         $lock = Utils::get_file(PATH_DATA . "/lock/{$lock_name}.lock");
-        if ($lock) 
-        {
+        if ($lock) {
             $time = time() - $lock;
             // 还没到10分钟，说明进程还活着
-            if ($time < $lock_timeout) 
-            {
+            if ($time < $lock_timeout) {
                 return true;
             }
-            unlink(PATH_DATA."/lock/{$lock_name}.lock");
+            unlink(PATH_DATA . "/lock/{$lock_name}.lock");
         }
         Utils::put_file(PATH_DATA . "/lock/{$lock_name}.lock", time());
         return false;
     }
 
-    public static function unlock($lock_name)
+    public static function unlock(string $lock_name)
     {
-        unlink(PATH_DATA."/lock/{$lock_name}.lock");
+        unlink(PATH_DATA . "/lock/{$lock_name}.lock");
     }
 
-    public static function time2second($seconds)
+    public static function time2second(int $seconds): int
     {
-        $seconds = (int)$seconds;
-        if( $seconds > 3600 )
-        {
+        if ($seconds > 3600) {
             $days_num = '';
-            if( $seconds > 24*3600 )
-            {
-                $days	  = (int)($seconds/86400);
-                $days_num = $days."天";
-                $seconds  = $seconds%86400;//取余
+            if ($seconds > 24 * 3600) {
+                $days = intval($seconds / 86400);
+                $days_num = $days . "天";
+                $seconds = $seconds % 86400;//取余
             }
-            $hours = intval($seconds/3600);
-            $minutes = $seconds%3600;//取余下秒数
-            $time = $days_num.$hours."小时".gmstrftime('%M分钟%S秒', $minutes);
-        }else{
+            $hours = intval($seconds / 3600);
+            $minutes = $seconds % 3600;//取余下秒数
+            $time = $days_num . $hours . "小时" . gmstrftime('%M分钟%S秒', $minutes);
+        } else {
             $time = gmstrftime('%H小时%M分钟%S秒', $seconds);
         }
         return $time;
@@ -83,22 +75,21 @@ class Utils
 
     /**
      * 获取文件行数
-     * 
+     *
      * @param mixed $filepath
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-03-31 21:54
      */
     public static function get_file_line($filepath)
     {
-        $line = 0 ;
-        $fp = fopen($filepath , 'r');
-        if (!$fp) 
-        {
+        $line = 0;
+        $fp = fopen($filepath, 'r');
+        if (!$fp) {
             return 0;
         }
         //获取文件的一行内容，注意：需要php5才支持该函数；
-        while( stream_get_line($fp,8192,"\n") ){
+        while (stream_get_line($fp, 8192, "\n")) {
             $line++;
         }
         fclose($fp);//关闭文件
@@ -107,12 +98,12 @@ class Utils
 
     /**
      * 获得表数
-     * 
-     * @param mixed $table_name     表名
-     * @param mixed $item_value     唯一索引
-     * @param int $table_num        表数量
+     *
+     * @param mixed $table_name 表名
+     * @param mixed $item_value 唯一索引
+     * @param int $table_num 表数量
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2015-10-22 23:25
      */
     public static function get_table_num($item_value, $table_num = 100)
@@ -128,12 +119,12 @@ class Utils
 
     /**
      * 获得表面
-     * 
-     * @param mixed $table_name     表名
-     * @param mixed $item_value     唯一索引
-     * @param int $table_num        表数量
+     *
+     * @param mixed $table_name 表名
+     * @param mixed $item_value 唯一索引
+     * @param int $table_num 表数量
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2015-10-22 23:25
      */
     public static function get_table_name($table_name, $item_value, $table_num = 100)
@@ -144,7 +135,7 @@ class Utils
         //str_pad:把字符串填充为指定的长度，下面是在左边加0，共3位
         $step = $table_num > 100 ? 3 : 2;
         $item_value = str_pad(base_convert(substr($item_value, -2), 16, 10) % $table_num, $step, "0", STR_PAD_LEFT);
-        return $table_name."_".$item_value;
+        return $table_name . "_" . $item_value;
     }
 
     // 获得当前使用内存
@@ -153,14 +144,14 @@ class Utils
         $memory = memory_get_usage();
         return self::format_bytes($memory);
     }
-    
+
     // 获得最高使用内存
     public static function memory_get_peak_usage()
     {
         $memory = memory_get_peak_usage();
         return self::format_bytes($memory);
     }
-    
+
     // 转换大小单位
     public static function format_bytes($size)
     {
@@ -184,20 +175,19 @@ class Utils
         $mem = strlen($mem);
         return self::format_bytes($mem);
     }
-    
+
     /**
      * 数字随机数
-     * 
+     *
      * @param int $num
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
     public static function rand_num($num = 7)
     {
         $rand = "";
-        for ($i = 0; $i < $num; $i ++)
-        {
+        for ($i = 0; $i < $num; $i++) {
             $rand .= mt_rand(0, 9);
         }
         return $rand;
@@ -205,23 +195,22 @@ class Utils
 
     /**
      * 字母数字混合随机数
-     * 
+     *
      * @param int $num
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
     public static function rand_str($num = 10)
     {
         $chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
         $string = "";
-        for ($i = 0; $i < $num; $i ++)
-        {
+        for ($i = 0; $i < $num; $i++) {
             $string .= substr($chars, rand(0, strlen($chars)), 1);
         }
         return $string;
     }
-    
+
     /**
      * 汉字转拼音
      *
@@ -240,53 +229,37 @@ class Utils
         $restr = '';
         $str = trim($str);
         $slen = strlen($str);
-        if ($slen < 2)
-        {
+        if ($slen < 2) {
             return $str;
         }
-        if (count($pinyins) == 0)
-        {
+        if (count($pinyins) == 0) {
             $fp = fopen(PATH_DATA . '/pinyin.dat', 'r');
-            while (!feof($fp))
-            {
+            while (!feof($fp)) {
                 $line = trim(fgets($fp));
                 $pinyins[$line[0] . $line[1]] = substr($line, 3, strlen($line) - 3);
             }
             fclose($fp);
         }
-        for ($i = 0; $i < $slen; $i ++)
-        {
-            if (ord($str[$i]) > 0x80)
-            {
+        for ($i = 0; $i < $slen; $i++) {
+            if (ord($str[$i]) > 0x80) {
                 $c = $str[$i] . $str[$i + 1];
-                $i ++;
-                if (isset($pinyins[$c]))
-                {
-                    if ($ishead == 0)
-                    {
+                $i++;
+                if (isset($pinyins[$c])) {
+                    if ($ishead == 0) {
                         $restr .= $pinyins[$c];
-                    }
-                    else
-                    {
+                    } else {
                         $restr .= $pinyins[$c][0];
                     }
-                }
-                else
-                {
+                } else {
                     // $restr .= "_";
                 }
-            }
-            else if (preg_match("/[a-z0-9]/i", $str[$i]))
-            {
+            } else if (preg_match("/[a-z0-9]/i", $str[$i])) {
                 $restr .= $str[$i];
-            }
-            else
-            {
+            } else {
                 // $restr .= "_";
             }
         }
-        if ($isclose == 0)
-        {
+        if ($isclose == 0) {
             unset($pinyins);
         }
         return $restr;
@@ -294,10 +267,10 @@ class Utils
 
     /**
      * 生成字母前缀
-     * 
+     *
      * @param mixed $s0
      * @return char
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
     public static function letter_first($s0)
@@ -332,13 +305,13 @@ class Utils
         if ($asc >= -11055 and $asc <= -10247) return "Z";
         return 0; // null
     }
-    
+
     /**
      * 获得某天前的时间戳
-     * 
+     *
      * @param mixed $day
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
     public static function getxtime($day)
@@ -352,8 +325,7 @@ class Utils
      */
     public static function get_file($url, $timeout = 10)
     {
-        if (function_exists('curl_init'))
-        {
+        if (function_exists('curl_init')) {
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -376,24 +348,18 @@ class Utils
     public static function put_file($file, $content, $flag = 0)
     {
         $pathinfo = pathinfo($file);
-        if (!empty($pathinfo['dirname']))
-        {
-            if (file_exists($pathinfo['dirname']) === false)
-            {
-                if (@mkdir($pathinfo['dirname'], 0777, true) === false)
-                {
+        if (!empty($pathinfo['dirname'])) {
+            if (file_exists($pathinfo['dirname']) === false) {
+                if (@mkdir($pathinfo['dirname'], 0777, true) === false) {
                     return false;
                 }
             }
         }
-        if ($flag === FILE_APPEND)
-        {
+        if ($flag === FILE_APPEND) {
             // 多个php-fpm写一个文件的时候容易丢失，要加锁
             //return @file_put_contents($file, $content, FILE_APPEND|LOCK_EX);
             return @file_put_contents($file, $content, FILE_APPEND);
-        }
-        else
-        {
+        } else {
             return @file_put_contents($file, $content, LOCK_EX);
         }
     }
@@ -409,12 +375,9 @@ class Utils
     public static function pathExists($path)
     {
         $p = pathinfo($path . '/tmp.txt');
-        if (!empty($p['dirname']))
-        {
-            if (file_exists($p['dirname']) === false)
-            {
-                if (mkdir($p['dirname'], 0777, true) === false)
-                {
+        if (!empty($p['dirname'])) {
+            if (file_exists($p['dirname']) === false) {
+                if (mkdir($p['dirname'], 0777, true) === false) {
                     return false;
                 }
             }
@@ -424,27 +387,22 @@ class Utils
 
     /**
      * 递归删除目录
-     * 
+     *
      * @param mixed $dir
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
     public static function deldir($dir)
     {
         //先删除目录下的文件：
         $dh = opendir($dir);
-        while ($file = readdir($dh)) 
-        {
-            if($file!="." && $file!="..") 
-            {
-                $fullpath = $dir."/".$file;
-                if(!is_dir($fullpath)) 
-                {
+        while ($file = readdir($dh)) {
+            if ($file != "." && $file != "..") {
+                $fullpath = $dir . "/" . $file;
+                if (!is_dir($fullpath)) {
                     unlink($fullpath);
-                } 
-                else
-                {
+                } else {
                     self::deldir($fullpath);
                 }
             }
@@ -452,12 +410,9 @@ class Utils
 
         closedir($dh);
         //删除当前文件夹：
-        if(rmdir($dir)) 
-        {
+        if (rmdir($dir)) {
             return true;
-        }
-        else
-        {
+        } else {
             return false;
         }
     }
@@ -471,56 +426,44 @@ class Utils
      */
     public static function chmodr($path, $filemode)
     {
-        if (!is_dir($path))
-        {
+        if (!is_dir($path)) {
             return @chmod($path, $filemode);
         }
-        
+
         $dh = opendir($path);
-        while (($file = readdir($dh)) !== false)
-        {
-            if ($file != '.' && $file != '..')
-            {
+        while (($file = readdir($dh)) !== false) {
+            if ($file != '.' && $file != '..') {
                 $fullpath = $path . '/' . $file;
-                if (is_link($fullpath))
-                {
+                if (is_link($fullpath)) {
                     return FALSE;
-                }
-                elseif (!is_dir($fullpath) && !@chmod($fullpath, $filemode))
-                {
+                } elseif (!is_dir($fullpath) && !@chmod($fullpath, $filemode)) {
                     return FALSE;
-                }
-                elseif (!self::chmodr($fullpath, $filemode))
-                {
+                } elseif (!self::chmodr($fullpath, $filemode)) {
                     return FALSE;
                 }
             }
         }
-        
+
         closedir($dh);
-        
-        if (@chmod($path, $filemode))
-        {
+
+        if (@chmod($path, $filemode)) {
             return TRUE;
-        }
-        else
-        {
+        } else {
             return FALSE;
         }
     }
 
     /**
      * 数组格式化为CSV
-     * 
+     *
      * @param mixed $data
      * @return void
-     * @author seatle <seatle@foxmail.com> 
+     * @author seatle <seatle@foxmail.com>
      * @created time :2016-07-29 11:32
      */
     public static function format_csv($data)
     {
-        foreach ($data as $k=>$v) 
-        {
+        foreach ($data as $k => $v) {
             $v = str_replace(",", "", $v);
             $v = str_replace("，", "", $v);
             $data[$k] = $v;
@@ -535,12 +478,9 @@ class Utils
      */
     public static function is_utf8($str)
     {
-        if ($str === mb_convert_encoding(mb_convert_encoding($str, "UTF-32", "UTF-8"), "UTF-8", "UTF-32"))
-        {
+        if ($str === mb_convert_encoding(mb_convert_encoding($str, "UTF-32", "UTF-8"), "UTF-8", "UTF-32")) {
             return true;
-        }
-        else
-        {
+        } else {
             return false;
         }
     }
@@ -552,8 +492,7 @@ class Utils
      */
     public static function cn_strtotime($dtime)
     {
-        if (!preg_match("/[^0-9]/", $dtime))
-        {
+        if (!preg_match("/[^0-9]/", $dtime)) {
             return $dtime;
         }
         $dtime = trim($dtime);
@@ -566,39 +505,31 @@ class Utils
         $dtime = trim(preg_replace("/[ ]{1,}/", " ", $dtime));
         $ds = explode(" ", $dtime);
         $ymd = explode("-", $ds[0]);
-        if (!isset($ymd[1]))
-        {
+        if (!isset($ymd[1])) {
             $ymd = explode(".", $ds[0]);
         }
-        if (isset($ymd[0]))
-        {
+        if (isset($ymd[0])) {
             $dt[0] = $ymd[0];
         }
         if (isset($ymd[1])) $dt[1] = $ymd[1];
         if (isset($ymd[2])) $dt[2] = $ymd[2];
         if (strlen($dt[0]) == 2) $dt[0] = '20' . $dt[0];
-        if (isset($ds[1]))
-        {
+        if (isset($ds[1])) {
             $hms = explode(":", $ds[1]);
             if (isset($hms[0])) $dt[3] = $hms[0];
             if (isset($hms[1])) $dt[4] = $hms[1];
             if (isset($hms[2])) $dt[5] = $hms[2];
         }
-        foreach ($dt as $k => $v)
-        {
+        foreach ($dt as $k => $v) {
             $v = preg_replace("/^0{1,}/", '', trim($v));
-            if ($v == '')
-            {
+            if ($v == '') {
                 $dt[$k] = 0;
             }
         }
         $mt = mktime($dt[3], $dt[4], $dt[5], $dt[1], $dt[2], $dt[0]);
-        if (!empty($mt))
-        {
+        if (!empty($mt)) {
             return $mt;
-        }
-        else
-        {
+        } else {
             return strtotime($dtime);
         }
     }
@@ -622,36 +553,27 @@ class Utils
     // 获取 Url 跳转后的真实地址
     public static function getrealurl($url)
     {
-        if (empty($url))
-        {
+        if (empty($url)) {
             return $url;
         }
         $header = get_headers($url, 1);
-        if (empty($header[0]) || empty($header[1]))
-        {
+        if (empty($header[0]) || empty($header[1])) {
             return $url;
         }
-        if (strpos($header[0], '301') || strpos($header[0], '302'))
-        {
-            if (empty($header['Location']))
-            {
+        if (strpos($header[0], '301') || strpos($header[0], '302')) {
+            if (empty($header['Location'])) {
                 return $url;
             }
-            if (is_array($header['Location']))
-            {
+            if (is_array($header['Location'])) {
                 return $header['Location'][count($header['Location']) - 1];
-            }
-            else
-            {
+            } else {
                 return $header['Location'];
             }
-        }
-        else
-        {
+        } else {
             return $url;
         }
     }
-    
+
     // 解压服务器用 Content-Encoding:gzip 压缩过的数据
     public static function gzdecode($data)
     {
@@ -659,18 +581,17 @@ class Utils
         $headerlen = 10;
         $extralen = 0;
         $filenamelen = 0;
-        if ($flags & 4)
-        {
+        if ($flags & 4) {
             $extralen = unpack('v', substr($data, 10, 2));
             $extralen = $extralen[1];
             $headerlen += 2 + $extralen;
         }
         if ($flags & 8)         // Filename
-        $headerlen = strpos($data, chr(0), $headerlen) + 1;
+            $headerlen = strpos($data, chr(0), $headerlen) + 1;
         if ($flags & 16)         // Comment
-        $headerlen = strpos($data, chr(0), $headerlen) + 1;
+            $headerlen = strpos($data, chr(0), $headerlen) + 1;
         if ($flags & 2)         // CRC at end of file
-        $headerlen += 2;
+            $headerlen += 2;
         $unpacked = @gzinflate(substr($data, $headerlen));
         if ($unpacked === FALSE) $unpacked = $data;
         return $unpacked;
@@ -688,48 +609,38 @@ class Utils
         $char = $sim ? array('零', '一', '二', '三', '四', '五', '六', '七', '八', '九') : array('零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖');
         $unit = $sim ? array('', '十', '百', '千', '', '万', '亿', '兆') : array('', '拾', '佰', '仟', '', '萬', '億', '兆');
         $retval = '';
-        
+
         $num = sprintf("%01.2f", $num);
-        
+
         list ($num, $dec) = explode('.', $num);
-        
+
         // 小数部分
-        if ($dec['0'] > 0)
-        {
+        if ($dec['0'] > 0) {
             $retval .= "{$char[$dec['0']]}角";
         }
-        if ($dec['1'] > 0)
-        {
+        if ($dec['1'] > 0) {
             $retval .= "{$char[$dec['1']]}分";
         }
-        
+
         // 整数部分
-        if ($num > 0)
-        {
+        if ($num > 0) {
             $retval = "元" . $retval;
             $f = 1;
             $str = strrev(intval($num));
-            for ($i = 0, $c = strlen($str); $i < $c; $i ++)
-            {
-                if ($str[$i] > 0)
-                {
+            for ($i = 0, $c = strlen($str); $i < $c; $i++) {
+                if ($str[$i] > 0) {
                     $f = 0;
                 }
-                if ($f == 1 && $str[$i] == 0)
-                {
+                if ($f == 1 && $str[$i] == 0) {
                     $out[$i] = "";
-                }
-                else
-                {
+                } else {
                     $out[$i] = $char[$str[$i]];
                 }
                 $out[$i] .= $str[$i] != '0' ? $unit[$i % 4] : '';
-                if ($i > 1 and $str[$i] + $str[$i - 1] == 0)
-                {
+                if ($i > 1 and $str[$i] + $str[$i - 1] == 0) {
                     $out[$i] = '';
                 }
-                if ($i % 4 == 0)
-                {
+                if ($i % 4 == 0) {
                     $out[$i] .= $unit[4 + floor($i / 4)];
                 }
             }
@@ -737,12 +648,11 @@ class Utils
         }
         return $retval;
     }
-    
-    public static function colorize($str, $status = "info") 
+
+    public static function colorize($str, $status = "info")
     {
         $out = "";
-        switch ($status) 
-        {
+        switch ($status) {
             case 'succ':
                 $out = "\033[32m";    // Blue
                 break;
@@ -762,48 +672,39 @@ class Utils
                 $out = "\033[0m";     // info
                 break;
         }
-        return $out.$str."\033[0m";
+        return $out . $str . "\033[0m";
     }
 
-    public static function node_to_array($dom, $node) 
+    public static function node_to_array($dom, $node)
     {
-        if(!is_a( $dom, 'DOMDocument' ) || !is_a( $node, 'DOMNode' )) 
-        {
+        if (!is_a($dom, 'DOMDocument') || !is_a($node, 'DOMNode')) {
             return false;
         }
 
         $array = [];
         // Discard empty nodes
-        if( empty( trim( $node->localName ))) 
-        {
+        if (empty(trim($node->localName))) {
             return false;
         }
-        if( XML_TEXT_NODE == $node->nodeType ) 
-        {
+        if (XML_TEXT_NODE == $node->nodeType) {
             return $node->nodeValue;
         }
-        foreach ($node->attributes as $attr) 
-        { 
-            $array['@'.$attr->localName] = $attr->nodeValue;
-        } 
-        foreach ($node->childNodes as $childNode) 
-        { 
-            if ( (isset($childNode->childNodes->length) && 1 == $childNode->childNodes->length) && 
-                 XML_TEXT_NODE == $childNode->firstChild->nodeType )
-            { 
-                $array[$childNode->localName] = $childNode->nodeValue; 
-            }  
-            else 
-            {
-                if( false !== ($a = self::node_to_array( $dom, $childNode))) 
-                {
+        foreach ($node->attributes as $attr) {
+            $array['@' . $attr->localName] = $attr->nodeValue;
+        }
+        foreach ($node->childNodes as $childNode) {
+            if ((isset($childNode->childNodes->length) && 1 == $childNode->childNodes->length) &&
+                XML_TEXT_NODE == $childNode->firstChild->nodeType
+            ) {
+                $array[$childNode->localName] = $childNode->nodeValue;
+            } else {
+                if (false !== ($a = self::node_to_array($dom, $childNode))) {
                     $array[$childNode->localName] = $a;
                 }
             }
         }
-        return $array; 
+        return $array;
     }
-
 }
 
 

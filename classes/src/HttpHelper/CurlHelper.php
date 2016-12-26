@@ -50,17 +50,16 @@ class CurlHelper
      * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
-    public static function setProxy($proxy, $proxy_auth = '')
+    public static function setProxy(string $proxy, string $proxy_auth = '')
     {
         self::$proxy = $proxy;
         self::$proxy_auth = $proxy_auth;
     }
 
     /**
-     * set referer
-     *
+     * @param string $referer
      */
-    public static function set_referer($referer)
+    public static function setReferer(string $referer)
     {
         self::$referer = $referer;
     }
@@ -128,7 +127,7 @@ class CurlHelper
      * @param string $ip
      * @return void
      */
-    public static function set_ip($ip)
+    public static function setIp($ip)
     {
         self::$ip = $ip;
     }
@@ -139,7 +138,7 @@ class CurlHelper
      * @param string $headers
      * @return void
      */
-    public static function setHeaders($headers)
+    public static function setHeaders(string $headers)
     {
         self::$headers = $headers;
     }
@@ -150,51 +149,40 @@ class CurlHelper
      * @param string $hosts
      * @return void
      */
-    public static function set_hosts($hosts)
+    public static function setHosts($hosts)
     {
         self::$hosts = $hosts;
     }
 
     /**
      * 设置Gzip
-     *
-     * @param string $hosts
-     * @return void
+     * @param string $gzip
      */
-    public static function set_gzip($gzip)
+    public static function setGzip(string $gzip)
     {
         self::$gzip = $gzip;
     }
 
-    /**
-     * 初始化 CURL
-     *
-     */
     public static function init()
     {
         //if (empty ( self::$ch ))
-        if (!is_resource ( self::$ch )) {
-            self::$ch = curl_init ();
-            curl_setopt( self::$ch, CURLOPT_RETURNTRANSFER, true );
-            curl_setopt( self::$ch, CURLOPT_CONNECTTIMEOUT, self::$timeout );
-            curl_setopt( self::$ch, CURLOPT_HEADER, false );
+        if (!is_resource(self::$ch)) {
+            self::$ch = curl_init();
+            curl_setopt(self::$ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt(self::$ch, CURLOPT_CONNECTTIMEOUT, self::$timeout);
+            curl_setopt(self::$ch, CURLOPT_HEADER, false);
             curl_setopt(self::$ch, CURLOPT_USERAGENT, self::$userAgent);
-            curl_setopt( self::$ch, CURLOPT_TIMEOUT, self::$timeout + 5);
+            curl_setopt(self::$ch, CURLOPT_TIMEOUT, self::$timeout + 5);
             // 在多线程处理场景下使用超时选项时，会忽略signals对应的处理函数，但是无耐的是还有小概率的crash情况发生
-            curl_setopt( self::$ch, CURLOPT_NOSIGNAL, true);
+            curl_setopt(self::$ch, CURLOPT_NOSIGNAL, true);
         }
         return self::$ch;
     }
 
-    /**
-     * get
-     *
-     *
-     */
-    public static function get($url, $fields = [])
+    public static function get(string $url, array $fields = [])
     {
-        self::init ();
-        return self::http_request($url, 'get', $fields);
+        self::init();
+        return self::request($url, 'get', $fields);
     }
 
     /**
@@ -202,84 +190,80 @@ class CurlHelper
      * 1、array('name'=>'yangzetao') 2、http_build_query(array('name'=>'yangzetao')) 3、json_encode(array('name'=>'yangzetao'))
      * 前两种是普通的post，可以用$_POST方式获取
      * 第三种是post stream( json rpc，其实就是webservice )，虽然是post方式，但是只能用流方式 http://input 后者 $HTTP_RAW_POST_DATA 获取
-     *
-     * @param mixed $url
+     * @param $url
      * @param array $fields
-     * @param mixed $proxy
-     * @static
-     * @access public
-     * @return void
+     * @return mixed
      */
-    public static function post($url, $fields = [])
+    public static function post(string $url, array $fields = [])
     {
-        self::init ();
-        return self::http_request($url, 'post', $fields);
+        self::init();
+        return self::request($url, 'post', $fields);
     }
 
-    public static function http_request($url, $type = 'get', $fields)
+    public static function request(string $url, string $type = 'get', array $fields)
     {
         // 如果是 get 方式，直接拼凑一个 url 出来
         if (strtolower($type) == 'get' && !empty($fields)) {
-            $url = $url . (strpos($url,"?")===false ? "?" : "&") . http_build_query($fields);
+            $url = $url . (strpos($url, "?") === false ? "?" : "&") . http_build_query($fields);
         }
 
         // 随机绑定 hosts，做负载均衡
         if (self::$hosts) {
             $parse_url = parse_url($url);
             $host = $parse_url['host'];
-            $key = rand(0, count(self::$hosts)-1);
+            $key = rand(0, count(self::$hosts) - 1);
             $ip = self::$hosts[$key];
             $url = str_replace($host, $ip, $url);
-            self::$headers = array_merge( array('Host:'.$host), self::$headers );
+            self::$headers = array_merge(array('Host:' . $host), self::$headers);
         }
-        curl_setopt( self::$ch, CURLOPT_URL, $url );
+        curl_setopt(self::$ch, CURLOPT_URL, $url);
         // 如果是 post 方式
         if (strtolower($type) == 'post') {
-            curl_setopt( self::$ch, CURLOPT_POST, true );
-            curl_setopt( self::$ch, CURLOPT_POSTFIELDS, $fields );
+            curl_setopt(self::$ch, CURLOPT_POST, true);
+            curl_setopt(self::$ch, CURLOPT_POSTFIELDS, $fields);
         }
         if (self::$userAgent) {
             curl_setopt(self::$ch, CURLOPT_USERAGENT, self::$userAgent);
         }
         if (self::$cookie) {
-            curl_setopt( self::$ch, CURLOPT_COOKIE, self::$cookie );
+            curl_setopt(self::$ch, CURLOPT_COOKIE, self::$cookie);
         }
         if (self::$cookie_jar) {
-            curl_setopt( self::$ch, CURLOPT_COOKIEJAR, self::$cookie_jar );
+            curl_setopt(self::$ch, CURLOPT_COOKIEJAR, self::$cookie_jar);
         }
         if (self::$cookie_file) {
-            curl_setopt( self::$ch, CURLOPT_COOKIEFILE, self::$cookie_file );
+            curl_setopt(self::$ch, CURLOPT_COOKIEFILE, self::$cookie_file);
         }
         if (self::$referer) {
-            curl_setopt( self::$ch, CURLOPT_REFERER, self::$referer );
+            curl_setopt(self::$ch, CURLOPT_REFERER, self::$referer);
         }
         if (self::$ip) {
-            self::$headers = array_merge( array('CLIENT-IP:'.self::$ip, 'X-FORWARDED-FOR:'.self::$ip), self::$headers );
+            self::$headers = array_merge(['CLIENT-IP:' . self::$ip, 'X-FORWARDED-FOR:' . self::$ip], self::$headers);
         }
         if (self::$headers) {
-            curl_setopt( self::$ch, CURLOPT_HTTPHEADER, self::$headers );
+            curl_setopt(self::$ch, CURLOPT_HTTPHEADER, self::$headers);
         }
         if (self::$gzip) {
-            curl_setopt( self::$ch, CURLOPT_ENCODING, 'gzip' );
+            curl_setopt(self::$ch, CURLOPT_ENCODING, 'gzip');
         }
         if (self::$proxy) {
-            curl_setopt( self::$ch, CURLOPT_PROXY, self::$proxy );
+            curl_setopt(self::$ch, CURLOPT_PROXY, self::$proxy);
             if (self::$proxy_auth) {
-                curl_setopt( self::$ch, CURLOPT_PROXYUSERPWD, self::$proxy_auth);
+                curl_setopt(self::$ch, CURLOPT_PROXYUSERPWD, self::$proxy_auth);
             }
         }
         if (self::$http_raw) {
-            curl_setopt( self::$ch, CURLOPT_HEADER, true );
+            curl_setopt(self::$ch, CURLOPT_HEADER, true);
         }
 
-        $data = curl_exec ( self::$ch );
+        $data = curl_exec(self::$ch);
         self::$info = curl_getinfo(self::$ch);
         if ($data === false) {
             //echo date("Y-m-d H:i:s"), ' Curl error: ' . curl_error( self::$ch ), "\n";
         }
 
         // 关闭句柄
-        curl_close( self::$ch );
+        curl_close(self::$ch);
         //$data = substr($data, 10);
         //$data = gzinflate($data);
         return $data;
@@ -296,7 +280,7 @@ class CurlHelper
     }
 }
 
-function classic_curl($urls, $delay) 
+function classic_curl(array $urls, int $delay)
 {
     $queue = curl_multi_init();
     $map = [];
@@ -325,7 +309,7 @@ function classic_curl($urls, $delay)
     } while ($mrc == CURLM_CALL_MULTI_PERFORM);
 
     while ($active > 0 && $mrc == CURLM_OK) {
-        while (curl_multi_exec($queue, $active) === CURLM_CALL_MULTI_PERFORM);
+        while (curl_multi_exec($queue, $active) === CURLM_CALL_MULTI_PERFORM) ;
         // 这里 curl_multi_select 一直返回 -1，所以这里就死循环了，CPU就100%了
         if (curl_multi_select($queue, 0.5) != -1) {
             do {
@@ -335,7 +319,7 @@ function classic_curl($urls, $delay)
     }
 
     $responses = [];
-    foreach ($map as $url=> $ch) {
+    foreach ($map as $url => $ch) {
         //$responses[$url] = callback(curl_multi_getcontent($ch), $delay);
         $responses[$url] = callback(curl_multi_getcontent($ch), $delay, $url);
         curl_multi_remove_handle($queue, $ch);
@@ -346,7 +330,7 @@ function classic_curl($urls, $delay)
     return $responses;
 }
 
-function rolling_curl($urls, $delay) 
+function rolling_curl($urls, $delay)
 {
     $queue = curl_multi_init();
     $map = [];
@@ -362,18 +346,20 @@ function rolling_curl($urls, $delay)
         $cookie = '_za=36643642-e546-4d60-a771-8af8dcfbd001; q_c1=a57a2b9f10964f909b8d8969febf3ab2|1437705596000|1437705596000; _xsrf=f0304fba4e44e1d008ec308d59bab029; cap_id="YWY1YmRmODlmZGVmNDc3MWJlZGFkZDg3M2E0M2Q5YjM=|1437705596|963518c454bb6f10d96775021c098c84e1e46f5a"; z_c0="QUFCQVgtRWZBQUFYQUFBQVlRSlZUVjR6NEZVUTgtRkdjTVc5UDMwZXRJZFdWZ2JaOWctNVhnPT0=|1438164574|aed6ef3707f246a7b64da4f1e8c089395d77ff2b"; __utma=51854390.1105113342.1437990174.1438160686.1438164116.10; __utmc=51854390; __utmz=51854390.1438134939.8.5.utmcsr=zhihu.com|utmccn=(referral)|utmcmd=referral|utmcct=/people/yangzetao; __utmv=51854390.100-1|2=registration_date=20131030=1^3=entry_date=20131030=1';
         curl_setopt($ch, CURLOPT_COOKIE, $cookie);
         $useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36';
-        curl_setopt( $ch, CURLOPT_USERAGENT, $useragent );
+        curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
         curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
 
         curl_multi_add_handle($queue, $ch);
-        $map[(string) $ch] = $url;
+        $map[(string)$ch] = $url;
     }
 
     $responses = [];
     do {
         while (($code = curl_multi_exec($queue, $active)) == CURLM_CALL_MULTI_PERFORM) ;
 
-        if ($code != CURLM_OK) { break; }
+        if ($code != CURLM_OK) {
+            break;
+        }
 
         // a request was just completed -- find out which one
         while ($done = curl_multi_info_read($queue)) {
@@ -381,8 +367,8 @@ function rolling_curl($urls, $delay)
             // get the info and content returned on the request
             $info = curl_getinfo($done['handle']);
             $error = curl_error($done['handle']);
-            $results = callback(curl_multi_getcontent($done['handle']), $delay, $map[(string) $done['handle']]);
-            $responses[$map[(string) $done['handle']]] = compact('info', 'error', 'results');
+            $results = callback(curl_multi_getcontent($done['handle']), $delay, $map[(string)$done['handle']]);
+            $responses[$map[(string)$done['handle']]] = compact('info', 'error', 'results');
 
             // remove the curl handle that just completed
             curl_multi_remove_handle($queue, $done['handle']);
@@ -400,11 +386,12 @@ function rolling_curl($urls, $delay)
     return $responses;
 }
 
-function callback($data, $delay, $url) {
+function callback($data, $delay, $url)
+{
     //echo $data;
     //echo date("Y-m-d H:i:s", time()) . " --- " . $url . "\n";
     if (!empty($data)) {
-        file_put_contents("./html2/".md5($url).".html", $data);
+        file_put_contents("./html2/" . md5($url) . ".html", $data);
     }
     // usleep模拟现实中比较负责的数据处理逻辑(如提取, 分词, 写入文件或数据库等)
     //usleep(1);

@@ -1,5 +1,8 @@
 <?php
 namespace Maple\DatabaseHelper;
+
+use  Maple\Utils\Utils;
+use Maple\Utils\Log;
 /**
  * 数据库类
  *
@@ -12,7 +15,6 @@ namespace Maple\DatabaseHelper;
  * @link http://www.epooll.com/
  * @license http://www.opensource.org/licenses/mit-license.php MIT License
  */
-
 class DatabaseHelper
 {
     private static $config = [];

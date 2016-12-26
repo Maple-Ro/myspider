@@ -1,5 +1,5 @@
 <?php
-namespace Maple\PhpSpider;
+namespace Maple\Utils;
 class Log
 {
     public static $log_show = false;
@@ -9,7 +9,7 @@ class Log
     {
         $out_sta = "";
         $out_end = "";
-        $msg = $out_sta.$msg.$out_end."\n";
+        $msg = $out_sta . $msg . $out_end . "\n";
         self::msg($msg);
     }
 
@@ -17,7 +17,7 @@ class Log
     {
         $out_sta = "\033[33m";
         $out_end = "\033[0m";
-        $msg = $out_sta.$msg.$out_end."\n";
+        $msg = $out_sta . $msg . $out_end . "\n";
         self::msg($msg);
     }
 
@@ -25,7 +25,7 @@ class Log
     {
         $out_sta = "\033[36m";
         $out_end = "\033[0m";
-        $msg = $out_sta.$msg.$out_end."\n";
+        $msg = $out_sta . $msg . $out_end . "\n";
         self::msg($msg);
     }
 
@@ -34,14 +34,13 @@ class Log
         $out_sta = "\033[31m";
         $out_end = "\033[0m";
         //$msg = $out_sta.date("H:i:s")." ".$msg.$out_end."\n";
-        $msg = $out_sta.$msg.$out_end."\n";
+        $msg = $out_sta . $msg . $out_end . "\n";
         self::msg($msg);
     }
 
     public static function msg($msg)
     {
-        if(self::$log_show)
-        {
+        if (self::$log_show) {
             echo $msg;
         }
         file_put_contents(self::$log_file, $msg, FILE_APPEND | LOCK_EX);
@@ -50,22 +49,19 @@ class Log
     /**
      * 记录日志
      * @param string $msg
-     * @param string $log_type  Note|Warning|Error
+     * @param string $log_type Note|Warning|Error
      * @return void
      */
     public static function add($msg, $log_type = '')
     {
-        if ($log_type != '') 
-        {
-            $msg = date("Y-m-d H:i:s")." [{$log_type}] " . $msg . "\n";
+        if ($log_type != '') {
+            $msg = date("Y-m-d H:i:s") . " [{$log_type}] " . $msg . "\n";
         }
-        if(self::$log_show)
-        {
+        if (self::$log_show) {
             echo $msg;
         }
         //file_put_contents(PATH_DATA."/log/".strtolower($log_type).".log", $msg, FILE_APPEND | LOCK_EX);
-        file_put_contents(PATH_DATA."/log/error.log", $msg, FILE_APPEND | LOCK_EX);
+        file_put_contents(PATH_DATA . "/log/error.log", $msg, FILE_APPEND | LOCK_EX);
     }
-
 }
 

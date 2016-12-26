@@ -34,11 +34,11 @@ define('PATH_DATA', ROOT_PATH."data");
 define('SRC', ROOT_PATH . "classes/src");
 
 //系统配置
-if( file_exists( ROOT_PATH."config/inc_config.php" ) )
+if (file_exists(ROOT_PATH . "config/inc_config.php"))
 {
     require ROOT_PATH."config/inc_config.php";
 }
-require "Loader.php";
+require "../include/Loader.php";
 spl_autoload_register("\\Loader::autoload");
 
 use Maple\Utils\Utils;

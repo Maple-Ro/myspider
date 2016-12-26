@@ -1,5 +1,6 @@
 <?php
 namespace Maple\Caches;
+//todo 重写
 /**
  * @package
  *
@@ -12,6 +13,7 @@ class RedisHelper
 {
     /**
      *  redis链接标识符号
+     * @var \Redis
      */
     protected static $redis = NULL;
 
@@ -27,22 +29,26 @@ class RedisHelper
 
     public static $error = "";
 
+    /**
+     * 测试redis能否正常连接
+     * @return bool
+     */
     public static function check()
     {
         // 获取配置
         if (empty($GLOBALS['config']['redis'])) {
             self::$error = "You not set a config array for connect";
-            return false;
+            return false; // TODO
         }
 
         $configs = $GLOBALS['config']['redis'];
 
         if (!extension_loaded("redis")) {
             self::$error = "Unable to load redis extension";
-            return false;
+            return false; //todo
         }
 
-        $redis = new Redis();
+        $redis = new \Redis();
         // 注意长连接在多进程环境下有问题，反正都是CLI环境，没必要用长连接
         if (!$redis->connect($configs['host'], $configs['port'], $configs['timeout'])) {
             self::$error = "Unable to connect to redis server";
@@ -68,10 +74,10 @@ class RedisHelper
     }
 
     /**
-     * @return null|\Redis
+     * @return \Redis
      * @throws \Exception
      */
-    public static function init()
+    public static function init(): \Redis
     {
         // 获取配置
         $configs = self::$configs ?? self::getDefaultConfig();
@@ -110,7 +116,7 @@ class RedisHelper
         return self::$redis;
     }
 
-    public static function set_connect($config = [])
+    public static function setConnect(array $config = [])
     {
         // 先断开原来的连接
         if (!empty(self::$redis)) {
@@ -122,29 +128,27 @@ class RedisHelper
             self::$configs = $config;
         } else {
             if (empty(self::$configs)) {
-                throw new Exception("You not set a config array for connect!");
+                throw new \Exception("You not set a config array for connect!");
             }
         }
     }
 
-    public static function set_connect_default($config = '')
+    public static function setConnectDefault(array $config = [])
     {
         if (empty($config)) {
             $config = self::getDefaultConfig();
         }
-        self::set_connect($config);
+        self::setConnect($config);
     }
 
     /**
      * 获取默认配置
+     * @return array
      */
-    protected static function getDefaultConfig()
+    protected static function getDefaultConfig(): array
     {
-        if (empty($GLOBALS['config']['redis'])) {
-            return [];
-        }
-        self::$configs = $GLOBALS['config']['redis'];
-        return self::$configs;
+        $configs = $GLOBALS['config']['redis'] ?? [];
+        return $configs;
     }
 
     /**
@@ -154,7 +158,7 @@ class RedisHelper
      * @param int $expire
      * @return bool
      */
-    public static function set($key, $value, $expire = 0): bool
+    public static function set(string $key, string $value, int $expire = 0): bool
     {
         $redis = self::init();
 
@@ -169,7 +173,6 @@ class RedisHelper
         return false;
     }
 
-
     /**
      *Set the string value in argument as value of the key if the key doesn't already exist in the database.
      *
@@ -180,13 +183,13 @@ class RedisHelper
      * @author seatle <seatle@foxmail.com>
      * @created time :2015-12-13 01:05
      */
-    public static function setNx($key, $value, $expire = 0): bool
+    public static function setNx(string $key, string $value, int $expire = 0): bool
     {
         $redis = self::init();
 
         if ($redis) {
             if ($expire > 0) {
-                return $redis->setnx($key, $expire, $value);
+                return $redis->setex($key, $expire, $value); // todo
             } else {
                 return $redis->setnx($key, $value);
             }
@@ -200,7 +203,7 @@ class RedisHelper
      * @param $key
      * @return bool|null|string
      */
-    public static function get($key)
+    public static function get(string $key)
     {
         $redis = self::init();
         if ($redis) {
@@ -211,45 +214,33 @@ class RedisHelper
 
     /**
      * del 删除数据
-     *
-     * @param mixed $key
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-13 01:05
+     * @param string $key
      */
-    public static function del($key)
+    public static function del(string $key)
     {
         $redis = self::init();
-
         if ($redis) {
-            return $redis->del($key);
+            $redis->del($key);
         }
-
-        return NULL;
     }
 
     /**
      * type 返回值的类型
-     *
-     * @param mixed $key
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-13 01:05
+     * @param string $key
+     * @return mixed
      */
-    public static function type($key)
+    public static function type(string $key)
     {
         $redis = self::init();
-        $types = array(
+        $types = [
             '0' => 'set',
             '1' => 'string',
-            '3' => 'list',
-        );
+            '3' => 'list'
+        ];
 
         if ($redis) {
             return $types[$redis->type($key)];
         }
-
-        return NULL;
     }
 
     /**
@@ -274,14 +265,11 @@ class RedisHelper
 
     /**
      * decr 名称为key的string减少integer, integer为0则减1
-     *
-     * @param mixed $key
+     * @param $key
      * @param int $integer
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @return int
      */
-    public static function decr($key, $integer = 0)
+    public static function decr(string $key, int $integer = 0): int
     {
         $redis = self::init();
 
@@ -292,180 +280,136 @@ class RedisHelper
                 return $redis->decrby($key, $integer);
             }
         }
-
-        return NULL;
     }
 
     /**
      * append 名称为key的string的值附加value
-     *
-     * @param mixed $key
-     * @param mixed $value
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @param string $key
+     * @param $value
+     * @return int
      */
-    public static function append($key, $value)
+    public static function append(string $key, string $value): int
     {
         $redis = self::init();
 
         if ($redis) {
             return $redis->append($key, $value);
         }
-
-        return NULL;
     }
 
     /**
      * substr 返回名称为key的string的value的子串
-     *
-     * @param mixed $key
-     * @param mixed $start
-     * @param mixed $end
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @param string $key
+     * @param int $start
+     * @param int $end
+     * @return string
      */
-    public static function substr($key, $start, $end)
+    public static function substr(string $key, int $start, int $end)
     {
         $redis = self::init();
 
         if ($redis) {
-            return $redis->substr($key, $start, $end);
+            return $redis->getRange($key, $start, $end);
         }
-
-        return NULL;
     }
 
     /**
-     * select 按索引查询
-     *
-     * @param mixed $index
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * select database
+     * @param int $index
      */
-    public static function select($index)
+    public static function select(int $index)
     {
         $redis = self::init();
 
         if ($redis) {
-            return $redis->select($index);
+            $redis->select($index);
         }
-
-        return NULL;
     }
 
     /**
      * dbsize 返回当前数据库中key的数目
-     *
-     * @param mixed $key
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @return int
      */
-    public static function dbsize()
+    public static function dbsize(): int
     {
         $redis = self::init();
 
         if ($redis) {
             return $redis->dbsize();
         }
-
-        return NULL;
     }
 
     /**
      * flushdb 删除当前选择数据库中的所有key
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @return bool
      */
-    public static function flushdb()
+    public static function flushdb(): bool
     {
         $redis = self::init();
 
         if ($redis) {
             return $redis->flushdb();
         }
-
-        return NULL;
+        return false;
     }
 
     /**
      * flushall 删除所有数据库中的所有key
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @return bool
      */
-    public static function flushall()
+    public static function flushall(): bool
     {
         $redis = self::init();
-
         if ($redis) {
             return $redis->flushall();
         }
-
-        return NULL;
+        return false;
     }
 
     /**
      * save 将数据保存到磁盘
-     *
-     * @param mixed $is_bgsave 将数据异步保存到磁盘
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @param bool $isAsySave
+     * @return bool
      */
-    public static function save($is_bgsave = false)
+    public static function save($isAsySave = false)
     {
         $redis = self::init();
 
         if ($redis) {
-            if (!$is_bgsave) {
+            if (!$isAsySave) {
                 return $redis->save();
             } else {
                 return $redis->bgsave();
             }
         }
-
-        return NULL;
+        return false;
     }
 
     /**
      * info 提供服务器的信息和统计
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @return string
      */
-    public static function info()
+    public static function info(): string
     {
         $redis = self::init();
-
         if ($redis) {
             return $redis->info();
         }
-
-        return NULL;
     }
 
     /**
      * slowlog 慢查询日志
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @param string $command
+     * @param int $len
+     * @return mixed|null
      */
-    public static function slowlog($command = 'get', $len = 0)
+    public static function slowLog(string $command = 'get', int $len = 0)
     {
         $redis = self::init();
 
         if ($redis) {
             if (!empty($len)) {
-                return $redis->slowlog($command, $len);
+                return $redis->slowlog($command, $len); //TODO
             } else {
                 return $redis->slowlog($command);
             }
@@ -476,12 +420,9 @@ class RedisHelper
 
     /**
      * lastsave 返回上次成功将数据保存到磁盘的Unix时戳
-     *
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2015-12-18 11:28
+     * @return int
      */
-    public static function lastsave()
+    public static function lastSave(): int
     {
         $redis = self::init();
 

@@ -1,4 +1,6 @@
 <?php
+namespace Maple\Caches;
+
 /**
  * 存储类
  * 这里用redis实现
@@ -12,26 +14,21 @@
  * @link http://www.epooll.com/
  * @license http://www.opensource.org/licenses/mit-license.php MIT License
  */
+use Maple\PhpSpider\Log;
 
-class cache
+class Cache
 {
     // 多进程下面不能用单例模式
     //protected static $_instance;
     /**
      * 获取实例
-     * 
-     * @return void
-     * @author seatle <seatle@foxmail.com> 
-     * @created time :2016-04-10 22:55
+     * @return \Redis
      */
-    public static function init()
+    public static function init(): \Redis
     {
-        if(extension_loaded('Redis'))
-        {
-            $_instance = new Redis();
-        }
-        else
-        {
+        if (extension_loaded('Redis')) {
+            $_instance = new \Redis();
+        } else {
             $errmsg = "extension redis is not installed";
             Log::add($errmsg, "Error");
             return null;
@@ -40,10 +37,8 @@ class cache
         $_instance->connect($GLOBALS['config']['redis']['host'], $GLOBALS['config']['redis']['port'], $GLOBALS['config']['redis']['timeout']);
 
         // 验证
-        if ($GLOBALS['config']['redis']['pass'])
-        {
-            if ( !$_instance->auth($GLOBALS['config']['redis']['pass']) ) 
-            {
+        if ($GLOBALS['config']['redis']['pass']) {
+            if (!$_instance->auth($GLOBALS['config']['redis']['pass'])) {
                 $errmsg = "Redis Server authentication failed!!";
                 Log::add($errmsg, "Error");
                 return null;
@@ -55,7 +50,7 @@ class cache
         //$_instance->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP);      // use built-in serialize/unserialize
         //$_instance->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_IGBINARY); // use igBinary serialize/unserialize
 
-        $_instance->setOption(Redis::OPT_PREFIX, $GLOBALS['config']['redis']['prefix'] . ":");
+        $_instance->setOption(\Redis::OPT_PREFIX, $GLOBALS['config']['redis']['prefix'] . ":");
 
         return $_instance;
     }
