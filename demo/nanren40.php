@@ -1,10 +1,7 @@
 <?php
 ini_set("memory_limit", "1024M");
-require dirname(__FILE__) . '/../src/init.php';
-
-/* Do NOT delete this comment */
-/* 不要删除这段注释 */
-
+require '../include/init.php';
+use Maple\PhpSpider\PhpSpider;
 $configs = [
     'name' => 'nanren40',
     'domains' => [
@@ -73,7 +70,7 @@ $configs = [
 
 $spider = new PhpSpider($configs);
 
-$spider->on_extract_field = function ($fieldname, $data, $page) {
+$spider->onExtractField = function ($fieldname, $data, $page) {
     if ($fieldname == 'name') {
 //        $data = trim(preg_replace("#\(.*?\)#", "", $data));
     }

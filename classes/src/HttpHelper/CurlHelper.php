@@ -18,14 +18,14 @@ class CurlHelper
     protected static $timeout = 10;
     protected static $ch = null;
     protected static $userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36';
-    protected static $http_raw = false;
+    protected static $httpRaw = false;
     protected static $cookie = null;
     protected static $cookie_jar = null;
     protected static $cookie_file = null;
     protected static $referer = null;
     protected static $ip = null;
     protected static $proxy = null;
-    protected static $proxy_auth = null;
+    protected static $proxyAuth = null;
     protected static $headers = [];
     protected static $hosts = [];
     protected static $gzip = false;
@@ -53,7 +53,7 @@ class CurlHelper
     public static function setProxy(string $proxy, string $proxy_auth = '')
     {
         self::$proxy = $proxy;
-        self::$proxy_auth = $proxy_auth;
+        self::$proxyAuth = $proxy_auth;
     }
 
     /**
@@ -92,7 +92,7 @@ class CurlHelper
      * @param string $cookie_jar
      * @return void
      */
-    public static function set_cookie_jar($cookie_jar)
+    public static function setCookieJar($cookie_jar)
     {
         self::$cookie_jar = $cookie_jar;
     }
@@ -103,7 +103,7 @@ class CurlHelper
      * @param string $cookie_file
      * @return void
      */
-    public static function set_cookie_file($cookie_file)
+    public static function setCookieFile($cookie_file)
     {
         self::$cookie_file = $cookie_file;
     }
@@ -111,14 +111,14 @@ class CurlHelper
     /**
      * 获取内容的时候是不是连header也一起获取
      *
-     * @param mixed $http_raw
+     * @param mixed $httpRaw
      * @return void
      * @author seatle <seatle@foxmail.com>
      * @created time :2016-09-18 10:17
      */
-    public static function setHttpRaw($http_raw)
+    public static function setHttpRaw($httpRaw)
     {
-        self::$http_raw = $http_raw;
+        self::$httpRaw = $httpRaw;
     }
 
     /**
@@ -248,11 +248,11 @@ class CurlHelper
         }
         if (self::$proxy) {
             curl_setopt(self::$ch, CURLOPT_PROXY, self::$proxy);
-            if (self::$proxy_auth) {
-                curl_setopt(self::$ch, CURLOPT_PROXYUSERPWD, self::$proxy_auth);
+            if (self::$proxyAuth) {
+                curl_setopt(self::$ch, CURLOPT_PROXYUSERPWD, self::$proxyAuth);
             }
         }
-        if (self::$http_raw) {
+        if (self::$httpRaw) {
             curl_setopt(self::$ch, CURLOPT_HEADER, true);
         }
 

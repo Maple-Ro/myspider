@@ -1,6 +1,5 @@
 <?php
 namespace Maple\Caches;
-//todo 重写
 /**
  * @package
  *
@@ -15,19 +14,19 @@ class RedisHelper
      *  redis链接标识符号
      * @var \Redis
      */
-    protected static $redis = NULL;
+    private $redis = NULL;
 
     /**
      *  redis配置数组
      */
-    protected static $configs = [];
+    private $configs = [];
 
     /**
      *  默认redis前缀
      */
-    public static $prefix = "Maple";
+    const PREFIX = "Maple";
 
-    public static $error = "";
+    private $error = "";
 
     /**
      * 测试redis能否正常连接
@@ -37,28 +36,28 @@ class RedisHelper
     {
         // 获取配置
         if (empty($GLOBALS['config']['redis'])) {
-            self::$error = "You not set a config array for connect";
+//            $this->error = "You not set a config array for connect";
             return false; // TODO
         }
 
         $configs = $GLOBALS['config']['redis'];
 
         if (!extension_loaded("redis")) {
-            self::$error = "Unable to load redis extension";
+//            $this->error = "Unable to load redis extension";
             return false; //todo
         }
 
         $redis = new \Redis();
         // 注意长连接在多进程环境下有问题，反正都是CLI环境，没必要用长连接
         if (!$redis->connect($configs['host'], $configs['port'], $configs['timeout'])) {
-            self::$error = "Unable to connect to redis server";
+//            $this->error = "Unable to connect to redis server";
             return false;
         }
 
         // 验证
         if ($configs['pass']) {
             if (!$redis->auth($configs['pass'])) {
-                self::$error = "Redis Server authentication failed";
+//                $this->error = "Redis Server authentication failed";
                 return false;
             }
         }
@@ -67,82 +66,89 @@ class RedisHelper
         return true;
     }
 
-    public static function close()
+    private function close()
     {
-        self::$redis->close();
-        self::$redis = null;
+        $this->redis->close();
+        $this->redis = null;
     }
 
     /**
      * @return \Redis
      * @throws \Exception
      */
-    public static function init(): \Redis
+    public function init(): \Redis
     {
         // 获取配置
-        $configs = self::$configs ?? self::getDefaultConfig();
+        $this->configs = self::getDefaultConfig();
         if (empty($configs)) {
-            self::$error = "You not set a config array for connect";
-            throw new \Exception('You not set a config array for connect');
+            $this->error = "You not set a config array for connect";
         }
 
         // 如果当前链接标识符为空，或者ping不同，就close之后重新打开
-        if (empty(self::$redis) || !self::ping()) {
+        if (empty($this->redis) || !self::ping()) {
             // 如果当前已经有链接标识符，但是ping不了，则先关闭
-            if (!empty(self::$redis)) {
-                self::$redis->close();
+            if (!empty($this->redis)) {
+                $this->redis->close();
             }
 
-            self::$redis = new \Redis();
-            if (!self::$redis->connect($configs['host'], $configs['port'], $configs['timeout'])) {
-                self::$error = "Unable to connect to redis server";
-                self::$redis = null;
-                throw new \Exception('Unable to connect to redis server');
-            }
-
-            // 验证
-            if ($configs['pass']) {
-                if (!self::$redis->auth($configs['pass'])) {
-                    self::$error = "Redis Server authentication failed";
-                    self::$redis = null;
-                    throw new \Exception('Redis Server authentication failed');
-                }
-            }
-
-            $prefix = empty($configs['prefix']) ? self::$prefix : $configs['prefix'];
-            self::$redis->setOption(\Redis::OPT_PREFIX, $prefix . ":");
+            $this->redis = new \Redis();
+            $this->connect();
         }
 
-        return self::$redis;
+        return $this->redis;
     }
 
-    public static function setConnect(array $config = [])
+    private function connect()
     {
-        // 先断开原来的连接
-        if (!empty(self::$redis)) {
-            self::$redis->close();
-            self::$redis = null;
+        if (!$this->redis->connect($this->configs['host'], $this->configs['port'], $this->configs['timeout'])) {
+            $this->error = "Unable to connect to redis server";
+            $this->redis = null;
+            throw new \Exception('Unable to connect to redis server');
         }
-
-        if (!empty($config)) {
-            self::$configs = $config;
-        } else {
-            if (empty(self::$configs)) {
-                throw new \Exception("You not set a config array for connect!");
-            }
+        // 验证
+        if ($this->configs['pass']) {
+            $this->auth();
         }
+        $prefix = $this->configs['prefix'] ?? self::PREFIX;
+        $this->redis->setOption(\Redis::OPT_PREFIX, $prefix . ":");
     }
 
-    public static function setConnectDefault(array $config = [])
+    private function auth()
     {
-        if (empty($config)) {
-            $config = self::getDefaultConfig();
+        if (!$this->redis->auth($this->configs['pass'])) {
+            $this->error = "Redis Server authentication failed";
+            $this->redis = null;
+            throw new \Exception('Redis Server authentication failed');
         }
-        self::setConnect($config);
     }
+
+//    public static function setConnect(array $config = [])
+//    {
+//        // 先断开原来的连接
+//        if (!empty($this->redis)) {
+//            $this->redis->close();
+//            $this->redis = null;
+//        }
+//
+//        if (!empty($config)) {
+//            $this->configs = $config;
+//        } else {
+//            if (empty($this->configs)) {
+//                throw new \Exception("You not set a config array for connect!");
+//            }
+//        }
+//    }
+//
+//    public static function setConnectDefault(array $config = [])
+//    {
+//        if (empty($config)) {
+//            $config = self::getDefaultConfig();
+//        }
+//        self::setConnect($config);
+//    }
 
     /**
-     * 获取默认配置
+     * 加载配置
      * @return array
      */
     protected static function getDefaultConfig(): array
@@ -158,19 +164,13 @@ class RedisHelper
      * @param int $expire
      * @return bool
      */
-    public static function set(string $key, string $value, int $expire = 0): bool
+    public function set(string $key, string $value, int $expire = 0): bool
     {
-        $redis = self::init();
-
-        if ($redis) {
-            if ($expire > 0) {
-                return $redis->setex($key, $expire, $value);
-            } else {
-                return $redis->set($key, $value);
-            }
+        if ($expire > 0) {
+            return $this->redis->setex($key, $expire, $value);
+        } else {
+            return $this->redis->set($key, $value);
         }
-
-        return false;
     }
 
     /**
@@ -183,19 +183,13 @@ class RedisHelper
      * @author seatle <seatle@foxmail.com>
      * @created time :2015-12-13 01:05
      */
-    public static function setNx(string $key, string $value, int $expire = 0): bool
+    public function setNx(string $key, string $value, int $expire = 0): bool
     {
-        $redis = self::init();
-
-        if ($redis) {
-            if ($expire > 0) {
-                return $redis->setex($key, $expire, $value); // todo
-            } else {
-                return $redis->setnx($key, $value);
-            }
+        if ($expire > 0) {
+            return $this->redis->setex($key, $expire, $value); // todo
+        } else {
+            return $this->redis->setnx($key, $value);
         }
-
-        return false;
     }
 
     /**
@@ -203,25 +197,18 @@ class RedisHelper
      * @param $key
      * @return bool|null|string
      */
-    public static function get(string $key)
+    public function get(string $key)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->get($key);
-        }
-        return NULL;
+        return $this->redis->get($key);
     }
 
     /**
      * del 删除数据
      * @param string $key
      */
-    public static function del(string $key)
+    public function del(string $key)
     {
-        $redis = self::init();
-        if ($redis) {
-            $redis->del($key);
-        }
+        $this->redis->del($key);
     }
 
     /**
@@ -229,18 +216,14 @@ class RedisHelper
      * @param string $key
      * @return mixed
      */
-    public static function type(string $key)
+    public function type(string $key)
     {
-        $redis = self::init();
         $types = [
             '0' => 'set',
             '1' => 'string',
             '3' => 'list'
         ];
-
-        if ($redis) {
-            return $types[$redis->type($key)];
-        }
+        return $types[$this->redis->type($key)];
     }
 
     /**
@@ -249,18 +232,13 @@ class RedisHelper
      * @param int $integer
      * @return int 新的数量
      */
-    public static function incr($key, $integer = 0): int
+    public function incr($key, $integer = 0): int
     {
-        $redis = self::init();
-
-        if ($redis) {
-            if ($integer === 0) {
-                return $redis->incr($key);
-            } else {
-                return $redis->incrby($key, $integer);
-            }
+        if ($integer === 0) {
+            return $this->redis->incr($key);
+        } else {
+            return $this->redis->incrby($key, $integer);
         }
-        return 0;
     }
 
     /**
@@ -269,16 +247,12 @@ class RedisHelper
      * @param int $integer
      * @return int
      */
-    public static function decr(string $key, int $integer = 0): int
+    public function decr(string $key, int $integer = 0): int
     {
-        $redis = self::init();
-
-        if ($redis) {
-            if (empty($integer)) {
-                return $redis->decr($key);
-            } else {
-                return $redis->decrby($key, $integer);
-            }
+        if (empty($integer)) {
+            return $this->redis->decr($key);
+        } else {
+            return $this->redis->decrby($key, $integer);
         }
     }
 
@@ -288,13 +262,9 @@ class RedisHelper
      * @param $value
      * @return int
      */
-    public static function append(string $key, string $value): int
+    public function append(string $key, string $value): int
     {
-        $redis = self::init();
-
-        if ($redis) {
-            return $redis->append($key, $value);
-        }
+        return $this->redis->append($key, $value);
     }
 
     /**
@@ -304,66 +274,45 @@ class RedisHelper
      * @param int $end
      * @return string
      */
-    public static function substr(string $key, int $start, int $end)
+    public function substr(string $key, int $start, int $end)
     {
-        $redis = self::init();
-
-        if ($redis) {
-            return $redis->getRange($key, $start, $end);
-        }
+        return $this->redis->getRange($key, $start, $end);
     }
 
     /**
      * select database
      * @param int $index
      */
-    public static function select(int $index)
+    public function select(int $index)
     {
-        $redis = self::init();
-
-        if ($redis) {
-            $redis->select($index);
-        }
+        $this->redis->select($index);
     }
 
     /**
      * dbsize 返回当前数据库中key的数目
      * @return int
      */
-    public static function dbsize(): int
+    public function dbsize(): int
     {
-        $redis = self::init();
-
-        if ($redis) {
-            return $redis->dbsize();
-        }
+        return $this->redis->dbsize();
     }
 
     /**
      * flushdb 删除当前选择数据库中的所有key
      * @return bool
      */
-    public static function flushdb(): bool
+    public function flushdb(): bool
     {
-        $redis = self::init();
-
-        if ($redis) {
-            return $redis->flushdb();
-        }
-        return false;
+        return $this->redis->flushdb();
     }
 
     /**
      * flushall 删除所有数据库中的所有key
      * @return bool
      */
-    public static function flushall(): bool
+    public function flushall(): bool
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->flushall();
-        }
-        return false;
+        return $this->redis->flushall();
     }
 
     /**
@@ -371,30 +320,22 @@ class RedisHelper
      * @param bool $isAsySave
      * @return bool
      */
-    public static function save($isAsySave = false)
+    public function save($isAsySave = false)
     {
-        $redis = self::init();
-
-        if ($redis) {
-            if (!$isAsySave) {
-                return $redis->save();
-            } else {
-                return $redis->bgsave();
-            }
+        if (!$isAsySave) {
+            return $this->redis->save();
+        } else {
+            return $this->redis->bgsave();
         }
-        return false;
     }
 
     /**
      * info 提供服务器的信息和统计
      * @return string
      */
-    public static function info(): string
+    public function info(): string
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->info();
-        }
+        return $this->redis->info();
     }
 
     /**
@@ -403,34 +344,22 @@ class RedisHelper
      * @param int $len
      * @return mixed|null
      */
-    public static function slowLog(string $command = 'get', int $len = 0)
+    public function slowLog(string $command = 'get', int $len = 0)
     {
-        $redis = self::init();
-
-        if ($redis) {
-            if (!empty($len)) {
-                return $redis->slowlog($command, $len); //TODO
-            } else {
-                return $redis->slowlog($command);
-            }
+        if (!empty($len)) {
+//                return $this->redis->slowlog($command, $len); //TODO
+        } else {
+            return $this->redis->slowlog($command);
         }
-
-        return NULL;
     }
 
     /**
      * lastsave 返回上次成功将数据保存到磁盘的Unix时戳
      * @return int
      */
-    public static function lastSave(): int
+    public function lastSave(): int
     {
-        $redis = self::init();
-
-        if ($redis) {
-            return $redis->lastsave();
-        }
-
-        return NULL;
+        return $this->redis->lastsave();
     }
 
     /**
@@ -439,15 +368,9 @@ class RedisHelper
      * @param string $value
      * @return int
      */
-    public static function lPush(string $key, string $value)
+    public function lPush(string $key, string $value)
     {
-        $redis = self::init();
-
-        if ($redis) {
-            return $redis->lPush($key, $value);
-        }
-
-        return 0;
+        return $this->redis->lPush($key, $value);
     }
 
     /**
@@ -456,14 +379,9 @@ class RedisHelper
      * @param $value
      * @return int|null
      */
-    public static function rPush($key, $value)
+    public function rPush($key, $value)
     {
-        $redis = self::init();
-
-        if ($redis) {
-            return $redis->rpush($key, $value);
-        }
-        return 0;
+        return $this->redis->rpush($key, $value);
     }
 
     /**
@@ -471,13 +389,9 @@ class RedisHelper
      * @param $key
      * @return string
      */
-    public static function lPop(string $key)
+    public function lPop(string $key)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->lpop($key);
-        }
-        return '';
+        return $this->redis->lpop($key);
     }
 
     /**
@@ -485,13 +399,9 @@ class RedisHelper
      * @param $key
      * @return string
      */
-    public static function rPop(string $key)
+    public function rPop(string $key)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->rpop($key);
-        }
-        return '';
+        return $this->redis->rpop($key);
     }
 
     /**
@@ -499,13 +409,9 @@ class RedisHelper
      * @param string $key
      * @return int
      */
-    public static function lSize(string $key)
+    public function lSize(string $key)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->lLen($key);
-        }
-        return 0;
+        return $this->redis->lLen($key);
     }
 
     /**
@@ -514,13 +420,9 @@ class RedisHelper
      * @param int $index
      * @return string
      */
-    public static function lIndex(string $key, int $index = 0)
+    public function lIndex(string $key, int $index = 0)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->lIndex($key, $index);
-        }
-        return NULL;
+        return $this->redis->lIndex($key, $index);
     }
 
     /**
@@ -530,13 +432,9 @@ class RedisHelper
      * @param int $end
      * @return array
      */
-    public static function lRange(string $key, int $start, int $end): array
+    public function lRange(string $key, int $start, int $end): array
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->lRange($key, $start, $end);
-        }
-        return [];
+        return $this->redis->lRange($key, $start, $end);
     }
 
     /**
@@ -545,15 +443,15 @@ class RedisHelper
      * @param int $length
      * @return array
      */
-    public static function rList(string $key, int $length): array
+    public function rList(string $key, int $length): array
     {
-        $queue_length = self::lSize($key);
+        $queue_length = $this->lSize($key);
         // 如果队列中有数据
         if ($queue_length > 0) {
             $list = [];
             $count = ($queue_length >= $length) ? $length : $queue_length;
             for ($i = 0; $i < $count; $i++) {
-                $data = self::rPop($key);
+                $data = $this->rPop($key);
                 if ($data === false) {
                     continue;
                 }
@@ -578,13 +476,9 @@ class RedisHelper
      * @param string $key
      * @return array
      */
-    public static function keysArray(string $key)
+    public function keysArray(string $key)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->keys($key);
-        }
-        return [];
+        return $this->redis->keys($key);
     }
 
     /**
@@ -595,13 +489,9 @@ class RedisHelper
      * @param string $key
      * @return int
      */
-    public static function ttl(string $key)
+    public function ttl(string $key)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->ttl($key);
-        }
-        return 0;
+        return $this->redis->ttl($key);
     }
 
     /**
@@ -613,13 +503,9 @@ class RedisHelper
      * @author seatle <seatle@foxmail.com>
      * @created time :2015-12-13 01:05
      */
-    public static function expire(string $key, $expire)
+    public function expire(string $key, $expire)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->expire($key, $expire);
-        }
-        return false;
+        return $this->redis->expire($key, $expire);
     }
 
     /**
@@ -627,13 +513,9 @@ class RedisHelper
      * @param $key
      * @return bool
      */
-    public static function exists(string $key)
+    public function exists(string $key)
     {
-        $redis = self::init();
-        if ($redis) {
-            return $redis->exists($key);
-        }
-        return false;
+        return $this->redis->exists($key);
     }
 
     /**
@@ -643,12 +525,12 @@ class RedisHelper
      * @author seatle <seatle@foxmail.com>
      * @created time :2015-12-13 01:05
      */
-    protected static function ping()
+    protected function ping()
     {
-        if (empty (self::$redis)) {
+        if (empty ($this->redis)) {
             return false;
         }
-        return self::$redis->ping() == '+PONG';
+        return $this->redis->ping() == '+PONG';
     }
 
     public static function encode($value)
@@ -661,5 +543,3 @@ class RedisHelper
         return json_decode($value, true);
     }
 }
-
-

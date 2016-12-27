@@ -613,8 +613,7 @@ class PhpSpider
         // 多任务需要pcntl扩展支持
         if (self::$taskNum > 1) {
             if (!function_exists('pcntl_fork')) {
-                Log::error("When the task number greater than 1 need pcntl extension");
-                exit; //todo
+                throw new SpiderException('you need to install pcntl extension');
             }
         }
 
