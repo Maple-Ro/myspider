@@ -61,7 +61,7 @@ class Utils
         } else {
             $time = gmstrftime('%H小时%M分钟%S秒', $seconds);
         }
-        return $time;
+        return intval($time);
     }
 
     public static function get_days($day_sta, $day_end = true, $range = 86400)

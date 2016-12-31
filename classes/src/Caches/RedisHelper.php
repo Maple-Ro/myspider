@@ -73,10 +73,9 @@ class RedisHelper
     }
 
     /**
-     * @return \Redis
      * @throws \Exception
      */
-    public function init(): \Redis
+    public function init()
     {
         // 获取配置
         $this->configs = self::getDefaultConfig();
@@ -95,7 +94,6 @@ class RedisHelper
             $this->connect();
         }
 
-        return $this->redis;
     }
 
     private function connect()

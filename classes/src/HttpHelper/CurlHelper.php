@@ -12,177 +12,56 @@ namespace Maple\HttpHelper;
  * @link http://www.epooll.com/
  * @license http://www.opensource.org/licenses/mit-license.php MIT License
  */
-
+/**-----------------------------------------------------------------  */
+/**-- 重构，修改所有的api，不使用静态的方式       */
+/**-----------------------------------------------------------------  */
 class CurlHelper
 {
-    protected static $timeout = 10;
-    protected static $ch = null;
-    protected static $userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36';
-    protected static $httpRaw = false;
-    protected static $cookie = null;
-    protected static $cookie_jar = null;
-    protected static $cookie_file = null;
-    protected static $referer = null;
-    protected static $ip = null;
-    protected static $proxy = null;
-    protected static $proxyAuth = null;
-    protected static $headers = [];
-    protected static $hosts = [];
-    protected static $gzip = false;
-    protected static $info = [];
+    protected $userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36';
+    protected $timeout = 10;
+    protected $ch = null;
+    protected $httpRaw = false;
+    protected $cookie = null;
+    protected $cookieJar = null;
+    protected $cookieFile = null;
+    protected $referer = null;
+    protected $ip = null;
+    protected $proxy = null;
+    protected $proxyAuth = null;
+    protected $headers = [];
+    protected $hosts = [];
+    protected $gzip = false;
+    protected $info = [];
 
-    /**
-     * set timeout
-     *
-     * @param int $timeout
-     */
-    public static function setTimeout(int $timeout)
+    public function __construct()
     {
-        self::$timeout = $timeout;
+        $this->init();
     }
 
-    /**
-     * 设置代理
-     *
-     * @param mixed $proxy
-     * @param string $proxy_auth
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
-     */
-    public static function setProxy(string $proxy, string $proxy_auth = '')
+    private function __clone()
     {
-        self::$proxy = $proxy;
-        self::$proxyAuth = $proxy_auth;
+        // TODO: Implement __clone() method.
     }
 
-    /**
-     * @param string $referer
-     */
-    public static function setReferer(string $referer)
+    private function init(): self
     {
-        self::$referer = $referer;
-    }
-
-    /**
-     * 设置 user_agent
-     *
-     * @param string $userAgent
-     * @return void
-     */
-    public static function setUserAgent($userAgent)
-    {
-        self::$userAgent = $userAgent;
-    }
-
-    /**
-     * 设置COOKIE
-     *
-     * @param string $cookie
-     * @return void
-     */
-    public static function setCookie($cookie)
-    {
-        self::$cookie = $cookie;
-    }
-
-    /**
-     * 设置COOKIE JAR
-     *
-     * @param string $cookie_jar
-     * @return void
-     */
-    public static function setCookieJar($cookie_jar)
-    {
-        self::$cookie_jar = $cookie_jar;
-    }
-
-    /**
-     * 设置COOKIE FILE
-     *
-     * @param string $cookie_file
-     * @return void
-     */
-    public static function setCookieFile($cookie_file)
-    {
-        self::$cookie_file = $cookie_file;
-    }
-
-    /**
-     * 获取内容的时候是不是连header也一起获取
-     *
-     * @param mixed $httpRaw
-     * @return void
-     * @author seatle <seatle@foxmail.com>
-     * @created time :2016-09-18 10:17
-     */
-    public static function setHttpRaw($httpRaw)
-    {
-        self::$httpRaw = $httpRaw;
-    }
-
-    /**
-     * 设置IP
-     *
-     * @param string $ip
-     * @return void
-     */
-    public static function setIp($ip)
-    {
-        self::$ip = $ip;
-    }
-
-    /**
-     * 设置Headers
-     *
-     * @param string $headers
-     * @return void
-     */
-    public static function setHeaders(string $headers)
-    {
-        self::$headers = $headers;
-    }
-
-    /**
-     * 设置Hosts
-     *
-     * @param string $hosts
-     * @return void
-     */
-    public static function setHosts($hosts)
-    {
-        self::$hosts = $hosts;
-    }
-
-    /**
-     * 设置Gzip
-     * @param string $gzip
-     */
-    public static function setGzip(string $gzip)
-    {
-        self::$gzip = $gzip;
-    }
-
-    public static function init()
-    {
-        //if (empty ( self::$ch ))
-        if (!is_resource(self::$ch)) {
-            self::$ch = curl_init();
-            curl_setopt(self::$ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt(self::$ch, CURLOPT_CONNECTTIMEOUT, self::$timeout);
-            curl_setopt(self::$ch, CURLOPT_HEADER, false);
-            curl_setopt(self::$ch, CURLOPT_USERAGENT, self::$userAgent);
-            curl_setopt(self::$ch, CURLOPT_TIMEOUT, self::$timeout + 5);
+        //if (empty ( $this->ch ))
+        if (!is_resource($this->ch)) {
+            $this->ch = curl_init();
+            curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, true);//返回内容为字符串
+            curl_setopt($this->ch, CURLOPT_CONNECTTIMEOUT, $this->timeout);
+            curl_setopt($this->ch, CURLOPT_HEADER, false);
+            curl_setopt($this->ch, CURLOPT_USERAGENT, $this->userAgent);
+            curl_setopt($this->ch, CURLOPT_TIMEOUT, $this->timeout + 5);
             // 在多线程处理场景下使用超时选项时，会忽略signals对应的处理函数，但是无耐的是还有小概率的crash情况发生
-            curl_setopt(self::$ch, CURLOPT_NOSIGNAL, true);
+            curl_setopt($this->ch, CURLOPT_NOSIGNAL, true);
         }
-        return self::$ch;
+        return $this->ch;
     }
 
-    public static function get(string $url, array $fields = [])
+    public function get(string $url, $fields = [])
     {
-        self::init();
-        return self::request($url, 'get', $fields);
+        return $this->request($url, 'get', $fields);
     }
 
     /**
@@ -194,13 +73,19 @@ class CurlHelper
      * @param array $fields
      * @return mixed
      */
-    public static function post(string $url, array $fields = [])
+    public function post(string $url, $fields = [])
     {
-        self::init();
-        return self::request($url, 'post', $fields);
+        return $this->request($url, 'post', $fields);
     }
 
-    public static function request(string $url, string $type = 'get', array $fields)
+    /**
+     * 关键方法
+     * @param string $url
+     * @param string $type
+     * @param $fields
+     * @return mixed
+     */
+    private function request(string $url, string $type = 'get', $fields)
     {
         // 如果是 get 方式，直接拼凑一个 url 出来
         if (strtolower($type) == 'get' && !empty($fields)) {
@@ -208,75 +93,207 @@ class CurlHelper
         }
 
         // 随机绑定 hosts，做负载均衡
-        if (self::$hosts) {
+        if ($this->hosts) {
             $parse_url = parse_url($url);
             $host = $parse_url['host'];
-            $key = rand(0, count(self::$hosts) - 1);
-            $ip = self::$hosts[$key];
+            $key = rand(0, count($this->hosts) - 1);
+            $ip = $this->hosts[$key];
             $url = str_replace($host, $ip, $url);
-            self::$headers = array_merge(array('Host:' . $host), self::$headers);
+            $this->headers = array_merge(['Host:' . $host], $this->headers);
         }
-        curl_setopt(self::$ch, CURLOPT_URL, $url);
+        curl_setopt($this->ch, CURLOPT_URL, $url);//
         // 如果是 post 方式
         if (strtolower($type) == 'post') {
-            curl_setopt(self::$ch, CURLOPT_POST, true);
-            curl_setopt(self::$ch, CURLOPT_POSTFIELDS, $fields);
+            curl_setopt($this->ch, CURLOPT_POST, true);
+            curl_setopt($this->ch, CURLOPT_POSTFIELDS, $fields);
         }
-        if (self::$userAgent) {
-            curl_setopt(self::$ch, CURLOPT_USERAGENT, self::$userAgent);
+        if ($this->userAgent) {
+            curl_setopt($this->ch, CURLOPT_USERAGENT, $this->userAgent);
         }
-        if (self::$cookie) {
-            curl_setopt(self::$ch, CURLOPT_COOKIE, self::$cookie);
+        if ($this->cookie) {
+            curl_setopt($this->ch, CURLOPT_COOKIE, $this->cookie);
         }
-        if (self::$cookie_jar) {
-            curl_setopt(self::$ch, CURLOPT_COOKIEJAR, self::$cookie_jar);
+        if ($this->cookieJar) {
+            curl_setopt($this->ch, CURLOPT_COOKIEJAR, $this->cookieJar);
         }
-        if (self::$cookie_file) {
-            curl_setopt(self::$ch, CURLOPT_COOKIEFILE, self::$cookie_file);
+        if ($this->cookieFile) {
+            curl_setopt($this->ch, CURLOPT_COOKIEFILE, $this->cookieFile);
         }
-        if (self::$referer) {
-            curl_setopt(self::$ch, CURLOPT_REFERER, self::$referer);
+        if ($this->referer) {
+            curl_setopt($this->ch, CURLOPT_REFERER, $this->referer);
         }
-        if (self::$ip) {
-            self::$headers = array_merge(['CLIENT-IP:' . self::$ip, 'X-FORWARDED-FOR:' . self::$ip], self::$headers);
+        if ($this->ip) {
+            $this->headers = array_merge(['CLIENT-IP:' . $this->ip, 'X-FORWARDED-FOR:' . $this->ip], $this->headers);
         }
-        if (self::$headers) {
-            curl_setopt(self::$ch, CURLOPT_HTTPHEADER, self::$headers);
+        if ($this->headers) {
+            curl_setopt($this->ch, CURLOPT_HTTPHEADER, $this->headers);
         }
-        if (self::$gzip) {
-            curl_setopt(self::$ch, CURLOPT_ENCODING, 'gzip');
+        if ($this->gzip) {
+            curl_setopt($this->ch, CURLOPT_ENCODING, $this->gzip);
         }
-        if (self::$proxy) {
-            curl_setopt(self::$ch, CURLOPT_PROXY, self::$proxy);
-            if (self::$proxyAuth) {
-                curl_setopt(self::$ch, CURLOPT_PROXYUSERPWD, self::$proxyAuth);
+        if ($this->proxy) {
+            curl_setopt($this->ch, CURLOPT_PROXY, $this->proxy);
+            if ($this->proxyAuth) {
+                curl_setopt($this->ch, CURLOPT_PROXYUSERPWD, $this->proxyAuth);
             }
         }
-        if (self::$httpRaw) {
-            curl_setopt(self::$ch, CURLOPT_HEADER, true);
+        if ($this->httpRaw) {
+            curl_setopt($this->ch, CURLOPT_HEADER, true);
         }
 
-        $data = curl_exec(self::$ch);
-        self::$info = curl_getinfo(self::$ch);
+        $data = curl_exec($this->ch); //获取数据
+        $this->info = curl_getinfo($this->ch);
         if ($data === false) {
-            //echo date("Y-m-d H:i:s"), ' Curl error: ' . curl_error( self::$ch ), "\n";
+            //echo date("Y-m-d H:i:s"), ' Curl error: ' . curl_error( $this->ch ), "\n";
         }
 
         // 关闭句柄
-        curl_close(self::$ch);
+        curl_close($this->ch);
         //$data = substr($data, 10);
         //$data = gzinflate($data);
         return $data;
     }
 
-    public static function getInfo()
+    public function getInfo()
     {
-        return self::$info;
+        return $this->info;
     }
 
-    public static function getHttpCode()
+    public function getHttpCode()
     {
-        return self::$info['http_code'];
+        if (!empty($this->info)) return $this->info['http_code'];
+    }
+
+    /**
+     * set timeout
+     *
+     * @param int $timeout
+     */
+    public function setTimeout(int $timeout)
+    {
+        $this->timeout = $timeout;
+    }
+
+    /**
+     * 设置代理
+     *
+     * @param mixed $proxy
+     * @param string $proxy_auth
+     * @return void
+     * @author seatle <seatle@foxmail.com>
+     * @created time :2016-09-18 10:17
+     */
+    public function setProxy(string $proxy, string $proxy_auth = '')
+    {
+        $this->proxy = $proxy;
+        $this->proxyAuth = $proxy_auth;
+    }
+
+    /**
+     * @param string $referer
+     */
+    public function setReferer(string $referer)
+    {
+        $this->referer = $referer;
+    }
+
+    /**
+     * 设置 user_agent
+     *
+     * @param string $userAgent
+     * @return void
+     */
+    public function setUserAgent($userAgent)
+    {
+        $this->userAgent = $userAgent;
+    }
+
+    /**
+     * 设置COOKIE
+     *
+     * @param string $cookie
+     * @return void
+     */
+    public function setCookie($cookie)
+    {
+        $this->cookie = $cookie;
+    }
+
+    /**
+     * 设置COOKIE JAR
+     *
+     * @param string $cookieJar
+     * @return void
+     */
+    public function setCookieJar($cookieJar)
+    {
+        $this->cookieJar = $cookieJar;
+    }
+
+    /**
+     * 设置COOKIE FILE
+     *
+     * @param string $cookieFile
+     * @return void
+     */
+    public function setCookieFile($cookieFile)
+    {
+        $this->cookieFile = $cookieFile;
+    }
+
+    /**
+     * 获取内容的时候是不是连header也一起获取
+     *
+     * @param mixed $httpRaw
+     * @return void
+     * @author seatle <seatle@foxmail.com>
+     * @created time :2016-09-18 10:17
+     */
+    public function setHttpRaw(bool $httpRaw)
+    {
+        $this->httpRaw = $httpRaw;
+    }
+
+    /**
+     * 设置IP
+     *
+     * @param string $ip
+     * @return void
+     */
+    public function setIp($ip)
+    {
+        $this->ip = $ip;
+    }
+
+    /**
+     * 设置Headers
+     *
+     * @param string $headers
+     * @return void
+     */
+    public function setHeaders(string $headers)
+    {
+        $this->headers = $headers;
+    }
+
+    /**
+     * 设置Hosts
+     *
+     * @param string $hosts
+     * @return void
+     */
+    public function setHosts($hosts)
+    {
+        $this->hosts = $hosts;
+    }
+
+    /**
+     * 设置Gzip
+     * @param string $gzip
+     */
+    public function setGzip(string $gzip)
+    {
+        $this->gzip = $gzip;
     }
 }
 

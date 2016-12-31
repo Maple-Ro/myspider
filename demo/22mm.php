@@ -11,6 +11,7 @@ $configs = [
     'collect_fails' => 2,
     'task_num' => 4,
     'save_running_state' => true,
+    'log_show' => true,
     'scan_urls' => [
         "http://www.juemei.com/mm/sfz/",
         "http://www.juemei.com/mm/qcmm/",
@@ -90,7 +91,14 @@ $configs = [
 ];
 
 $spider = new PhpSpider($configs);
-
+/**-----------------------------------------------------------------  */
+/**-- spider初始化后，设置回调函数       */
+/**-----------------------------------------------------------------  */
+/**
+ * @param string $fieldname
+ * @param array $data
+ * @return array|string
+ */
 $spider->onExtractField = function (string $fieldname, array $data) {
     if ($fieldname == 'name') {
         $data = trim(preg_replace("#\(.*?\)#", "", $data));
