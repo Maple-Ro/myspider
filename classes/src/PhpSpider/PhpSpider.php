@@ -656,7 +656,7 @@ class PhpSpider
         }
 
         if ($this->onStart) {
-            call_user_func($this->onStart, $this); //todo ???
+            call_user_func($this->onStart, $this); //
         }
 
         $status_files = scandir(PATH_DATA . "/status"); //删除之前的任务状态文件
@@ -708,7 +708,7 @@ class PhpSpider
         /**-----------------------------------------------------------------  */
         while ($this->queueLSize()) {
             // 抓取页面
-            $this->collectPage();
+            $this->crawling();
 
             // 多任务下主任务未准备就绪
             if (self::$taskNum > 1 && !self::$taskMasterStatus) {
@@ -798,7 +798,7 @@ class PhpSpider
      * 爬取页面
      * @return bool
      */
-    protected function collectPage()
+    protected function crawling()
     {
         $count_collect_url = $this->countCollectUrl();
         Log::info(date("H:i:s") . " 发现抓取网页：{$count_collect_url} 个\n");
@@ -1605,7 +1605,7 @@ class PhpSpider
      * @return array
      * @throws SpiderException
      */
-    protected function getFields(array $configs, string $html, string $url, int $page): array
+    private function getFields(array $configs, string $html, string $url, int $page): array
     {
         $fields = [];
         foreach ($configs as $conf) {
@@ -1709,7 +1709,7 @@ class PhpSpider
      * @param string $fieldname
      * @return array
      */
-    protected function getFieldsXpath(string $html, string $selector, string $fieldname)
+    private function getFieldsXpath(string $html, string $selector, string $fieldname)
     {
         $dom = new \DOMDocument();
         @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
@@ -1738,7 +1738,7 @@ class PhpSpider
                 //$nodes = util::node_to_array($dom, $element);
                 //echo $nodes['@src']."\n";
                 // 如果是img标签，直接取src值
-                if ($nodeType == 1 && in_array($nodeName, array('img'))) {
+                if ($nodeType == 1 && in_array($nodeName, ['img'])) {
                     $content = $element->getAttribute('src');
                 } // 如果是标签属性，直接取节点值
                 elseif ($nodeType == 2 || $nodeType == 3) {
@@ -1747,7 +1747,7 @@ class PhpSpider
                     // 保留nodeValue里的html符号，给children二次提取
                     $content = $dom->saveXml($element);
                     //$content = trim($dom->saveHtml($element));
-                    $content = preg_replace(array("#^<{$nodeName}.*>#isU", "#</{$nodeName}>$#isU"), array('', ''), $content);
+                    $content = preg_replace(["#^<{$nodeName}.*>#isU", "#</{$nodeName}>$#isU"], ['', ''], $content);
                 }
                 $array[] = trim($content);
             }
@@ -1869,7 +1869,7 @@ class PhpSpider
                 // 如果队列中的网页比任务数多，子任务可以采集
                 if ($this->queueLSize() > self::$taskNum) {
                     // 抓取页面
-                    $this->collectPage();
+                    $this->crawling();
                 } // 队列中网页太少，就都给主进程采集好了
                 else {
                     Log::warn("任务" . self::$taskId . "等待中...\n");
