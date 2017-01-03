@@ -43,7 +43,7 @@ class CurlHelper
         // TODO: Implement __clone() method.
     }
 
-    private function init(): self
+    private function init()
     {
         //if (empty ( $this->ch ))
         if (!is_resource($this->ch)) {

@@ -1,5 +1,8 @@
 <?php
 namespace Maple\Caches;
+
+use Maple\Utils\Log;
+
 /**
  * @package
  *
@@ -79,8 +82,10 @@ class RedisHelper
     {
         // 获取配置
         $this->configs = self::getDefaultConfig();
-        if (empty($configs)) {
+        if (empty($this->configs)) {
             $this->error = "You not set a config array for connect";
+            Log::error($this->error);
+            exit();
         }
 
         // 如果当前链接标识符为空，或者ping不同，就close之后重新打开

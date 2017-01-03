@@ -2,26 +2,25 @@
 ini_set("memory_limit", "1024M");
 require '../include/init.php';
 use Maple\PhpSpider\PhpSpider;
+use Maple\Utils\Log;
 $configs = [
     'name' => 'nanren40',
     'domains' => [
         'www.nanren40.com'
-
     ],
-    'log_show'=>true,
-    'interval'=>1000,
+//    'interval'=>1000,
     'collect_fails' => 2,
     'tasknum' => 4,
     'save_running_state' => true,
     'scan_urls' => [
-        "http://www.nanren40.com/zhengmei",
-        "http://www.nanren40.com/zhaizhai"
+        "http://www.nanren40.com/zhengmei/",
+        "http://www.nanren40.com/zhaizhai/"
     ],
-    'list_url_regexes' => [
+    'list_url_regex' => [
         "http://www.nanren40.com/zhengmei/list_2_\d+.html",
         "http://www.nanren40.com/zhaizhai/list_1_\d+.html"
     ],
-    'content_url_regexes' => [
+    'content_url_regex' => [
         "http://www.nanren40.com/zhaizhai/\d{4}.html",
         "http://www.nanren40.com/zhengmei/\d{4}.html"
     ],
@@ -70,13 +69,14 @@ $configs = [
 
 $spider = new PhpSpider($configs);
 
-$spider->onExtractField = function ($fieldname, $data, $page) {
+$spider->onExtractField = function ($fieldname, $data) {
     if ($fieldname == 'name') {
 //        $data = trim(preg_replace("#\(.*?\)#", "", $data));
     }
     if ($fieldname == 'time') {
 //        $data = mb_substr($data, 5, 15);
     } elseif ($fieldname == 'content') {
+        var_dump($data);
         $contents = $data;
         $array = [];
         foreach ($contents as $content) {
@@ -93,5 +93,6 @@ $spider->onExtractField = function ($fieldname, $data, $page) {
     }
     return $data;
 };
-
+//$res = $spider->request('http://www.nanren40.com/zhengmei');
+//var_dump($res);
 $spider->start();

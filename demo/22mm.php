@@ -11,7 +11,6 @@ $configs = [
     'collect_fails' => 2,
     'task_num' => 4,
     'save_running_state' => true,
-    'log_show' => true,
     'scan_urls' => [
         "http://www.juemei.com/mm/sfz/",
         "http://www.juemei.com/mm/qcmm/",
@@ -95,11 +94,11 @@ $spider = new PhpSpider($configs);
 /**-- spider初始化后，设置回调函数       */
 /**-----------------------------------------------------------------  */
 /**
- * @param string $fieldname
- * @param array $data
+ * @param  $fieldname
+ * @param  mixed $data
  * @return array|string
  */
-$spider->onExtractField = function (string $fieldname, array $data) {
+$spider->onExtractField = function ($fieldname, $data) {
     if ($fieldname == 'name') {
         $data = trim(preg_replace("#\(.*?\)#", "", $data));
     }
@@ -113,7 +112,7 @@ $spider->onExtractField = function (string $fieldname, array $data) {
             // 以纳秒为单位生成随机数
             $filename = uniqid() . ".jpg";
             // 在data目录下生成图片
-            $filePath = PATH_DATA . "/images/{$filename}";
+            $filePath = PATH_DATA . "/images/22/{$filename}";
             // 用系统自带的下载器wget下载
             exec("wget {$url} -O {$filePath}");
             $array[] = $filename;
@@ -124,3 +123,6 @@ $spider->onExtractField = function (string $fieldname, array $data) {
 };
 
 $spider->start();
+var_dump($spider);
+//$res = $spider->request('http://www.juemei.com/mm/201608/990.html');
+//print_r($res);

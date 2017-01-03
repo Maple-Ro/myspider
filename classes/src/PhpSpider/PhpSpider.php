@@ -462,13 +462,13 @@ class PhpSpider
                 }
             }
         }
-
+        $msg = '';
         if ($status) {
             $msg = "Success process page {$url}\n";
         } else {
-            $msg = "URL not match content_url_reg and list_url_reg, {$url}\n";
+//            $msg = "URL not match content_url_reg and list_url_reg, {$url}\n"; //扫描的过程中会有大量不匹配的url
         }
-        Log::add($msg);
+        Log::msg($msg);
     }
 
     /**
@@ -1557,15 +1557,15 @@ class PhpSpider
      * 分析提取HTML页面中的字段
      * @param string $html
      * @param string $url
-     * @param int $page
+     * @param $page
      */
-    protected function getHtmlFields(string $html, string $url, int $page)
+    protected function getHtmlFields(string $html, string $url, $page)
     {
         $fields = $this->getFields($this->configs['fields'], $html, $url, $page);
 
         if (!empty($fields)) {
             if ($this->onExtractPage) {
-                $return_data = call_user_func($this->onExtractPage, $page, $fields);
+                $return_data = call_user_func($this->onExtractPage, $page, $fields); //回调函数提取内容页有效内容
                 if (!isset($return_data)) {
                     Log::warn("on_extract_page函数返回为空\n");
                 } elseif (!is_array($return_data)) {
@@ -1601,11 +1601,11 @@ class PhpSpider
      * @param array $configs
      * @param string $html
      * @param string $url
-     * @param int $page
+     * @param  $page array?
      * @return array
      * @throws SpiderException
      */
-    private function getFields(array $configs, string $html, string $url, int $page): array
+    private function getFields(array $configs, string $html, string $url, $page): array
     {
         $fields = [];
         foreach ($configs as $conf) {
@@ -1709,7 +1709,7 @@ class PhpSpider
      * @param string $fieldname
      * @return array
      */
-    private function getFieldsXpath(string $html, string $selector, string $fieldname)
+    private function getFieldsXpath($html, string $selector, string $fieldname)
     {
         $dom = new \DOMDocument();
         @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
