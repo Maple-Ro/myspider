@@ -103,8 +103,18 @@ class RedisHelper
 
     private function connect()
     {
-        if (!$this->redis->connect($this->configs['host'], $this->configs['port'], $this->configs['timeout'])) {
-            $this->error = "Unable to connect to redis server";
+        try {
+            $res = $this->redis->connect($this->configs['host'], $this->configs['port'], $this->configs['timeout']);
+        } catch (\Error $e) {
+            $this->error = $e->getMessage();
+            $this->redis = null;
+            throw new \Exception('Unable to connect to redis server');
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            $this->redis = null;
+            throw new \Exception('Unable to connect to redis server');
+        }
+        if (!$res) {
             $this->redis = null;
             throw new \Exception('Unable to connect to redis server');
         }

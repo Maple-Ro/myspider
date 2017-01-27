@@ -88,7 +88,6 @@ $configs = [
         ]
     ]
 ];
-
 $spider = new PhpSpider($configs);
 /**-----------------------------------------------------------------  */
 /**-- spider初始化后，设置回调函数       */
@@ -123,6 +122,5 @@ $spider->onExtractField = function ($fieldname, $data) {
 };
 
 $spider->start();
-var_dump($spider);
 //$res = $spider->request('http://www.juemei.com/mm/201608/990.html');
 //print_r($res);
