@@ -14,7 +14,7 @@ namespace Maple\Caches;
  * @link http://www.epooll.com/
  * @license http://www.opensource.org/licenses/mit-license.php MIT License
  */
-use Maple\PhpSpider\Log;
+use Maple\Utils\Log;
 
 class Cache
 {

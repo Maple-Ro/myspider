@@ -9,7 +9,7 @@ $configs = [
         'www.juemei.com'
     ],
     'collect_fails' => 2,
-    'task_num' => 4,
+    'task_num' => 1,
     'save_running_state' => true,
     'scan_urls' => [
         "http://www.juemei.com/mm/sfz/",
@@ -113,8 +113,9 @@ $spider->onExtractField = function ($fieldname, $data) {
             // 在data目录下生成图片
             $filePath = PATH_DATA . "/images/22/{$filename}";
             // 用系统自带的下载器wget下载
-            exec("wget {$url} -O {$filePath}");
-            $array[] = $filename;
+//            exec("wget {$url} -O {$filePath}"); 不下载图片
+//            $array[] = $filename;
+            $array[] = $url; //存储图片原始路径，不下载图片
         }
         $data = implode(",", $array);
     }
