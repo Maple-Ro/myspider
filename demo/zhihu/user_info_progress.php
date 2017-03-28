@@ -1,10 +1,14 @@
 <?php
 
-include "phpspider/config.php";
-include "phpspider/db.php";
-include "phpspider/cache.php";
-include "phpspider/worker.php";
-include "phpspider/rolling_curl.php";
+ini_set("memory_limit", "1024M");
+require '../../include/init.php';
+use Maple\PhpSpider\PhpSpider;
+
+//include "phpspider/config.php";
+//include "phpspider/db.php";
+//include "phpspider/cache.php";
+//include "phpspider/worker.php";
+//include "phpspider/rolling_curl.php";
 include "user.php";
 
 $w = new worker();

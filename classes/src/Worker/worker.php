@@ -1,5 +1,7 @@
 <?php
 
+namespace Maple\Worker;
+
 /**
  * Worker多进程操作类
  *
@@ -102,7 +104,7 @@ class worker
                 echo "reload\n";
                 break;
             // show status 31
-            case SIGUSR2:   
+            case SIGUSR2:
                 echo "status\n";
                 break;
         }
@@ -113,25 +115,22 @@ class worker
      */
     public function run()
     {
-        $this->time_start = microtime(true); 
+        $this->time_start = microtime(true);
         $this->worker_id = 0;
         $this->worker_pid = posix_getpid();
         $this->set_process_title($this->title);
 
         // 这里赋值，worker进程也会克隆到
-        if ($this->log_show) 
-        {
+        if ($this->log_show) {
             Log::$log_show = true;
         }
 
-        if ($this->on_start) 
-        {
+        if ($this->on_start) {
             call_user_func($this->on_start, $this);
         }
 
         // worker进程从1开始，0被master进程所使用
-        for ($i = 1; $i <= $this->count; $i++) 
-        {
+        for ($i = 1; $i <= $this->count; $i++) {
             $this->fork_one_worker($i);
         }
         $this->monitor_workers();
@@ -148,13 +147,10 @@ class worker
         $pid = pcntl_fork();
 
         // 主进程记录子进程pid
-        if($pid > 0)
-        {
+        if($pid > 0) {
             self::$_worker_pids[$worker_id] = $pid;
-        }
-        // 子进程运行
-        elseif(0 === $pid)
-        {
+        } // 子进程运行
+        elseif(0 === $pid) {
             $this->time_start = microtime(true);
             $this->worker_id = $worker_id;
             $this->worker_pid = posix_getpid();
@@ -171,8 +167,7 @@ class worker
             register_shutdown_function(array($this, 'check_errors'));
 
             // 如果设置了worker进程启动回调函数
-            if ($this->on_worker_start) 
-            {
+            if ($this->on_worker_start) {
                 call_user_func($this->on_worker_start, $this);
             }
 
@@ -180,9 +175,7 @@ class worker
             $this->stop();
             // 这里用0表示正常退出
             exit(0);
-        }
-        else
-        {
+        } else {
             Log::add("fork one worker fail", "Error");
             exit;
         }
@@ -196,15 +189,12 @@ class worker
     protected static function set_process_user($user_name)
     {
         // 用户名为空 或者 当前用户不是root用户
-        if(empty($user_name) || posix_getuid() !== 0)
-        {
+        if(empty($user_name) || posix_getuid() !== 0) {
             return;
         }
         $user_info = posix_getpwnam($user_name);
-        if($user_info['uid'] != posix_getuid() || $user_info['gid'] != posix_getgid())
-        {
-            if(!posix_setgid($user_info['gid']) || !posix_setuid($user_info['uid']))
-            {
+        if($user_info['uid'] != posix_getuid() || $user_info['gid'] != posix_getgid()) {
+            if(!posix_setgid($user_info['gid']) || !posix_setuid($user_info['uid'])) {
                 Log::add('Can not run woker as '.$user_name." , You shuld be root", "Error");
             }
         }
@@ -218,16 +208,12 @@ class worker
      */
     protected function set_process_title($title)
     {
-        if (!empty($title)) 
-        {
+        if (!empty($title)) {
             // 需要扩展
-            if(extension_loaded('proctitle') && function_exists('setproctitle'))
-            {
+            if(extension_loaded('proctitle') && function_exists('setproctitle')) {
                 @setproctitle($title);
-            }
-            // >=php 5.5
-            elseif (function_exists('cli_set_process_title'))
-            {
+            } // >=php 5.5
+            elseif (function_exists('cli_set_process_title')) {
                 cli_set_process_title($title);
             }
         }
@@ -241,8 +227,7 @@ class worker
     {
         // 设置master进程的运行状态为运行中
         self::$_status = "running";
-        while(1)
-        {
+        while(1) {
             // pcntl_signal_dispatch 子进程无法接受到信号
             // 如果有信号到来，尝试触发信号处理函数
             //pcntl_signal_dispatch();
@@ -253,14 +238,12 @@ class worker
             //pcntl_signal_dispatch();
 
             // 子进程退出信号
-            if($pid > 0)
-            {
+            if($pid > 0) {
                 //echo "worker[".$pid."] stop\n";
                 //$this->stop();
 
                 // 如果不是正常退出，是被kill等杀掉的
-                if($status !== 0)
-                {
+                if($status !== 0) {
                     Log::add("worker {$pid} exit with status $status", "Warning");
                 }
 
@@ -273,36 +256,28 @@ class worker
                 //unset(self::$_worker_pids[$pid]);
 
                 // 再生成一个worker
-                if (!$this->run_once) 
-                {
+                if (!$this->run_once) {
                     $this->fork_one_worker($worker_id);
                 }
 
                 // 如果所有子进程都退出了，触发主进程退出函数
                 $all_worker_stop = true;
-                foreach (self::$_worker_pids as $_worker_pid) 
-                {
+                foreach (self::$_worker_pids as $_worker_pid) {
                     // 只要有一个worker进程还存在进程ID，就不算退出
-                    if ($_worker_pid != 0) 
-                    {
+                    if ($_worker_pid != 0) {
                         $all_worker_stop = false;
                     }
                 }
-                if ($all_worker_stop) 
-                {
-                    if ($this->on_stop) 
-                    {
+                if ($all_worker_stop) {
+                    if ($this->on_stop) {
                         call_user_func($this->on_stop, $this);
                     }
                     exit(0);
                 }
-            }
-            // 其他信号
-            else 
-            {
+            } // 其他信号
+            else {
                 // worker进程接受到master进行信号退出的，会到这里来
-                if ($this->on_stop) 
-                {
+                if ($this->on_stop) {
                     call_user_func($this->on_stop, $this);
                 }
                 exit(0);
@@ -320,17 +295,13 @@ class worker
         // 设置master、worker进程的运行状态为关闭状态
         self::$_status = "shutdown";
         // master进程
-        if(self::$_master_pid === posix_getpid())
-        {
+        if(self::$_master_pid === posix_getpid()) {
             // 循环给worker进程发送关闭信号
-            foreach (self::$_worker_pids as $worker_pid) 
-            {
+            foreach (self::$_worker_pids as $worker_pid) {
                 posix_kill($worker_pid, SIGINT);
             }
-        }
-        // worker进程
-        else 
-        {
+        } // worker进程
+        else {
             // 接收到master进程发送的关闭信号之后退出，这里应该考虑业务的完整性，不能强行exit
             $this->stop();
             exit(0);
@@ -344,8 +315,7 @@ class worker
      */
     public function stop()
     {
-        if ($this->on_worker_stop) 
-        {
+        if ($this->on_worker_stop) {
             call_user_func($this->on_worker_stop, $this);
         }
         // 设置worker进程的运行状态为关闭
@@ -359,16 +329,14 @@ class worker
     public function check_errors()
     {
         // 如果当前worker进程不是正常退出
-        if(self::$_status != "shutdown")
-        {
+        if(self::$_status != "shutdown") {
             $error_msg = "WORKER EXIT UNEXPECTED ";
             $errors = error_get_last();
             if($errors && ($errors['type'] === E_ERROR ||
-                $errors['type'] === E_PARSE ||
-                $errors['type'] === E_CORE_ERROR ||
-                $errors['type'] === E_COMPILE_ERROR || 
-                $errors['type'] === E_RECOVERABLE_ERROR ))
-            {
+                    $errors['type'] === E_PARSE ||
+                    $errors['type'] === E_CORE_ERROR ||
+                    $errors['type'] === E_COMPILE_ERROR ||
+                    $errors['type'] === E_RECOVERABLE_ERROR )) {
                 $error_msg .= $this->get_error_type($errors['type']) . " {$errors['message']} in {$errors['file']} on line {$errors['line']}";
             }
             Log::add($error_msg, 'Error');
@@ -382,38 +350,37 @@ class worker
      */
     protected function get_error_type($type)
     {
-        switch($type)
-        {
-        case E_ERROR: // 1 //
-            return 'E_ERROR';
-        case E_WARNING: // 2 //
-            return 'E_WARNING';
-        case E_PARSE: // 4 //
-            return 'E_PARSE';
-        case E_NOTICE: // 8 //
-            return 'E_NOTICE';
-        case E_CORE_ERROR: // 16 //
-            return 'E_CORE_ERROR';
-        case E_CORE_WARNING: // 32 //
-            return 'E_CORE_WARNING';
-        case E_COMPILE_ERROR: // 64 //
-            return 'E_COMPILE_ERROR';
-        case E_COMPILE_WARNING: // 128 //
-            return 'E_COMPILE_WARNING';
-        case E_USER_ERROR: // 256 //
-            return 'E_USER_ERROR';
-        case E_USER_WARNING: // 512 //
-            return 'E_USER_WARNING';
-        case E_USER_NOTICE: // 1024 //
-            return 'E_USER_NOTICE';
-        case E_STRICT: // 2048 //
-            return 'E_STRICT';
-        case E_RECOVERABLE_ERROR: // 4096 //
-            return 'E_RECOVERABLE_ERROR';
-        case E_DEPRECATED: // 8192 //
-            return 'E_DEPRECATED';
-        case E_USER_DEPRECATED: // 16384 //
-            return 'E_USER_DEPRECATED';
+        switch($type) {
+            case E_ERROR: // 1 //
+                return 'E_ERROR';
+            case E_WARNING: // 2 //
+                return 'E_WARNING';
+            case E_PARSE: // 4 //
+                return 'E_PARSE';
+            case E_NOTICE: // 8 //
+                return 'E_NOTICE';
+            case E_CORE_ERROR: // 16 //
+                return 'E_CORE_ERROR';
+            case E_CORE_WARNING: // 32 //
+                return 'E_CORE_WARNING';
+            case E_COMPILE_ERROR: // 64 //
+                return 'E_COMPILE_ERROR';
+            case E_COMPILE_WARNING: // 128 //
+                return 'E_COMPILE_WARNING';
+            case E_USER_ERROR: // 256 //
+                return 'E_USER_ERROR';
+            case E_USER_WARNING: // 512 //
+                return 'E_USER_WARNING';
+            case E_USER_NOTICE: // 1024 //
+                return 'E_USER_NOTICE';
+            case E_STRICT: // 2048 //
+                return 'E_STRICT';
+            case E_RECOVERABLE_ERROR: // 4096 //
+                return 'E_RECOVERABLE_ERROR';
+            case E_DEPRECATED: // 8192 //
+                return 'E_DEPRECATED';
+            case E_USER_DEPRECATED: // 16384 //
+                return 'E_USER_DEPRECATED';
         }
         return "";
     }

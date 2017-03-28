@@ -1,4 +1,8 @@
 <?php
+ini_set("memory_limit", "1024M");
+require '../../include/init.php';
+use Maple\PhpSpider\PhpSpider;
+use Maple\DatabaseHelper\DatabaseHelper;
 /**
  * 获取知乎关联用户 和 用户信息
  *
@@ -14,18 +18,17 @@
 
 /**
  * 获取用户详细信息
- * 
+ *
  * @param string $username
  * @return void
- * @author seatle <seatle@foxmail.com> 
+ * @author seatle <seatle@foxmail.com>
  * @created time :2015-07-28 09:46
  */
 function get_user_about($content)
 {
     $data = [];
 
-    if (empty($content)) 
-    {
+    if (empty($content)) {
         return $data;
     }
 
@@ -49,9 +52,9 @@ function get_user_about($content)
     // 性别
     preg_match('#<span class="item gender" ><i class="icon icon-profile-(.*?)"></i></span>#', $content, $out);
     $gender = empty($out[1]) ? 'other' : $out[1];
-    if ($gender == 'female') 
+    if ($gender == 'female')
         $data['gender'] = 0;
-    elseif ($gender == 'male') 
+    elseif ($gender == 'male')
         $data['gender'] = 1;
     else
         $data['gender'] = 2;
@@ -126,8 +129,7 @@ function get_user($content)
 {
     $data = [];
 
-    if (empty($content)) 
-    {
+    if (empty($content)) {
         return $data;
     }
     // 从用户主页获取用户最后一条动态信息
@@ -140,10 +142,10 @@ function get_user($content)
 
 /**
  * 保存用户信息
- * 
+ *
  * @param object $worker
  * @return array
- * @author seatle <seatle@foxmail.com> 
+ * @author seatle <seatle@foxmail.com>
  * @created time :2015-08-02 12:30
  */
 function save_user_info($worker = null)
@@ -161,54 +163,46 @@ function save_user_info($worker = null)
     //$row = db::get_one($sql);
     //if (!empty($row['username'])) 
     $username = get_user_queue('info');
-    if (!empty($username)) 
-    {
+    if (!empty($username)) {
         $username = addslashes($username);
         $worker->log("采集用户信息 --- " . $username . " --- 开始\n");
         $data = get_user_info($username);
-        if (!empty($data)) 
-        {
+        if (!empty($data)) {
             $worker->log("采集用户信息 --- " . $username . " --- 成功\n");
             // 更新采集时间, 让队列每次都取到不同的用户，形成采集死循环
             $data['info_uptime'] = $time;
             $data['info_progress_id'] = $progress_id;
             $data['last_message_week'] = empty($data['last_message_time']) ? 7 : intval(date("w"));
             $data['last_message_hour'] = empty($data['last_message_time']) ? 24 : intval(date("H"));
-            $sql = databaseHelper::update('user', $data, "`username`='{$username}'", true);
-            databaseHelper::query($sql);
-        }
-        else 
-        {
+            $sql = DatabaseHelper::update('user', $data, "`username`='{$username}'", true);
+            DatabaseHelper::query($sql);
+        } else {
             $worker->log("采集用户信息 --- " . $username . " --- 失败\n");
             // 更新采集时间, 让队列每次都取到不同的用户，形成采集死循环
             $sql = "Update `user` Set `info_uptime`='{$time}',`info_progress_id`='{$progress_id}' Where `username`='{$username}'";
-            databaseHelper::query($sql);
+            DatabaseHelper::query($sql);
         }
-    }
-    else 
-    {
+    } else {
         $worker->log("采集用户 ---  队列不存在");
     }
 }
 
 /**
  * 获取用户采集队列
- * 
+ *
  * @param string $key
  * @param int $count
  * @return void
- * @author seatle <seatle@foxmail.com> 
+ * @author seatle <seatle@foxmail.com>
  * @created time :2015-08-03 19:36
  */
 function get_user_queue($key = 'list', $count = 10000)
 {
     // 如果队列为空, 从数据库取一些
-    if (!cache::get_instance()->lsize($key)) 
-    {
+    if (!cache::get_instance()->lsize($key)) {
         $sql = "Select `username`, `{$key}_uptime` From `user` Order By `{$key}_uptime` Asc Limit {$count}";
-        $rows = databaseHelper::get_all($sql);
-        foreach ($rows as $row) 
-        {
+        $rows = DatabaseHelper::get_all($sql);
+        foreach ($rows as $row) {
             //echo $row['username'] . " --- " . date("Y-m-d H:i:s", $row[$key.'_uptime']) . "\n";
             cache::get_instance()->lpush($key, $row['username']);
         }
@@ -219,9 +213,9 @@ function get_user_queue($key = 'list', $count = 10000)
 
 /**
  * 保存用户索引
- * 
+ *
  * @return void
- * @author seatle <seatle@foxmail.com> 
+ * @author seatle <seatle@foxmail.com>
  * @created time :2015-08-02 12:30
  */
 function save_user_index($worker = null)
@@ -243,17 +237,16 @@ function save_user_index($worker = null)
     //$row = db::get_one($sql);
     //if (!empty($row['username'])) 
     $username = get_user_queue('index');
-    if (!empty($username)) 
-    {
+    if (!empty($username)) {
         $username = addslashes($username);
         // 先把用户深度拿出来，下面要增加1给新用户
         $sql = "Select `depth` From `user` Where `username`='{$username}'";
-        $row = databaseHelper::get_one($sql);
+        $row = DatabaseHelper::get_one($sql);
         $depth = $row['depth'];
 
         // 更新采集时间, 让队列每次都取到不同的用户
         $sql = "Update `user` Set `index_uptime`='{$time}',`index_progress_id`='{$progress_id}' Where `username`='{$username}'";
-        databaseHelper::query($sql);
+        DatabaseHelper::query($sql);
 
         $worker->log("采集用户列表 --- " . $username . " --- 开始");
         // $user_rows = get_user_index($username);
@@ -267,51 +260,41 @@ function save_user_index($worker = null)
         // 合并 关注了 和 关注者
         $user_rows = array_merge($followers_user, $followees_user);
 
-        if (!empty($user_rows)) 
-        {
+        if (!empty($user_rows)) {
             $worker->log("采集用户列表 --- " . $username . " --- 成功");
 
-            foreach ($user_rows as $user_row) 
-            {
+            foreach ($user_rows as $user_row) {
                 // 子用户
                 $c_username = addslashes($user_row['username']);
                 $sql = "Select Count(*) As count From `user` Where `username`='{$c_username}'";
-                $row = databaseHelper::get_one($sql);
+                $row = DatabaseHelper::get_one($sql);
                 // 如果用户不存在
-                if (!$row['count']) 
-                {
-                    $user_row['depth'] = $depth+1;
+                if (!$row['count']) {
+                    $user_row['depth'] = $depth + 1;
                     $user_row['parent_username'] = $username;
                     $user_row['addtime'] = $user_row['index_uptime'] = $user_row['info_uptime'] = time();
-                    if (databaseHelper::insert('user', $user_row))
-                    {
+                    if (DatabaseHelper::insert('user', $user_row)) {
                         $worker->log("入库用户 --- " . $c_username . " --- 成功");
-                    }
-                    else 
-                    {
+                    } else {
                         $worker->log("入库用户 --- " . $c_username . " --- 失败");
                     }
                 }
             }
-        }
-        else 
-        {
+        } else {
             $worker->log("采集用户列表 --- " . $username . " --- 失败");
         }
-    }
-    else 
-    {
+    } else {
         $worker->log("采集用户 ---  队列不存在");
     }
 }
 
 /**
  * 获取用户
- * 
+ *
  * @param string $username
  * @param string $user_type followees 、followers
  * @return void
- * @author seatle <seatle@foxmail.com> 
+ * @author seatle <seatle@foxmail.com>
  * @created time :2015-07-28 09:46
  */
 function get_user_index($username, $user_type = 'followees', $worker)
@@ -321,8 +304,7 @@ function get_user_index($username, $user_type = 'followees', $worker)
     cls_curl::set_gzip(true);
     $content = cls_curl::get($url);
 
-    if (empty($content)) 
-    {
+    if (empty($content)) {
         return [];
     }
 
@@ -331,15 +313,13 @@ function get_user_index($username, $user_type = 'followees', $worker)
     // 用户不足20个的时候，从ajax取不到用户，所以首页这里还是要取一下
     preg_match_all('#<h2 class="zm-list-content-title"><a data-tip=".*?" href="http://www.zhihu.com/people/(.*?)" class="zg-link" title=".*?">(.*?)</a></h2>#', $content, $out);
     $count = count($out[1]);
-    for ($i = 0; $i < $count; $i++) 
-    {
-        $d_username = empty($out[1][$i]) ? '' : $out[1][$i]; 
-        $d_nickname = empty($out[2][$i]) ? '' : $out[2][$i]; 
-        if (!empty($d_username) && !empty($d_nickname)) 
-        {
+    for ($i = 0; $i < $count; $i++) {
+        $d_username = empty($out[1][$i]) ? '' : $out[1][$i];
+        $d_nickname = empty($out[2][$i]) ? '' : $out[2][$i];
+        if (!empty($d_username) && !empty($d_nickname)) {
             $users[$d_username] = array(
-                'username'=>$d_username,
-                'nickname'=>$d_nickname,
+                'username' => $d_username,
+                'nickname' => $d_nickname,
             );
         }
     }
@@ -347,7 +327,7 @@ function get_user_index($username, $user_type = 'followees', $worker)
     $keyword = $user_type == 'followees' ? '关注了' : '关注者';
     $worker->log("采集用户 --- " . $username . " --- {$keyword} --- 主页 --- 成功\n");
 
-    preg_match('#<span class="zg-gray-normal">'.$keyword.'</span><br />\s<strong>(.*?)</strong><label> 人</label>#', $content, $out);
+    preg_match('#<span class="zg-gray-normal">' . $keyword . '</span><br />\s<strong>(.*?)</strong><label> 人</label>#', $content, $out);
     $user_count = empty($out[1]) ? 0 : intval($out[1]);
 
     preg_match('#<input type="hidden" name="_xsrf" value="(.*?)"/>#', $content, $out);
@@ -355,44 +335,38 @@ function get_user_index($username, $user_type = 'followees', $worker)
 
     preg_match('#<div class="zh-general-list clearfix" data-init="(.*?)">#', $content, $out);
     $url_params = empty($out[1]) ? '' : json_decode(html_entity_decode($out[1]), true);
-    if (!empty($_xsrf) && !empty($url_params) && is_array($url_params)) 
-    {
+    if (!empty($_xsrf) && !empty($url_params) && is_array($url_params)) {
         $url = "http://www.zhihu.com/node/" . $url_params['nodename'];
         $params = $url_params['params'];
 
         $j = 1;
-        for ($i = 0; $i < $user_count; $i=$i+20) 
-        {
+        for ($i = 0; $i < $user_count; $i = $i + 20) {
             $params['offset'] = $i;
             $post_data = array(
-                'method'=>'next',
-                'params'=>json_encode($params),
-                '_xsrf'=>$_xsrf,
+                'method' => 'next',
+                'params' => json_encode($params),
+                '_xsrf' => $_xsrf,
             );
             $content = cls_curl::post($url, $post_data);
-            if (empty($content)) 
-            {
+            if (empty($content)) {
                 $worker->log("采集用户 --- " . $username . " --- {$keyword} --- 第{$j}页 --- 失败\n");
                 continue;
             }
             $rows = json_decode($content, true);
-            if (empty($rows['msg']) || !is_array($rows['msg'])) 
-            {
+            if (empty($rows['msg']) || !is_array($rows['msg'])) {
                 $worker->log("采集用户 --- " . $username . " --- {$keyword} --- 第{$j}页 --- 失败\n");
                 continue;
             }
             $worker->log("采集用户 --- " . $username . " --- {$keyword} --- 第{$j}页 --- 成功\n");
 
-            foreach ($rows['msg'] as $row) 
-            {
+            foreach ($rows['msg'] as $row) {
                 preg_match_all('#<h2 class="zm-list-content-title"><a data-tip=".*?" href="http://www.zhihu.com/people/(.*?)" class="zg-link" title=".*?">(.*?)</a></h2>#', $row, $out);
-                $d_username = empty($out[1][0]) ? '' : $out[1][0]; 
-                $d_nickname = empty($out[2][0]) ? '' : $out[2][0]; 
-                if (!empty($d_username) && !empty($d_nickname)) 
-                {
+                $d_username = empty($out[1][0]) ? '' : $out[1][0];
+                $d_nickname = empty($out[2][0]) ? '' : $out[2][0];
+                if (!empty($d_username) && !empty($d_nickname)) {
                     $users[$d_username] = array(
-                        'username'=>$d_username,
-                        'nickname'=>$d_nickname,
+                        'username' => $d_username,
+                        'nickname' => $d_nickname,
                     );
                 }
             }

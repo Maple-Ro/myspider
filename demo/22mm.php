@@ -9,7 +9,7 @@ $configs = [
         'www.juemei.com'
     ],
     'collect_fails' => 2,
-    'task_num' => 1,
+    'task_num' => 4,
     'save_running_state' => true,
     'scan_urls' => [
         "http://www.juemei.com/mm/sfz/",
