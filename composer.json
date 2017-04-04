@@ -1,0 +1,23 @@
+{
+  "secure-http": false,
+  "require": {
+    "guzzlehttp/guzzle": "^6.2",
+    "filp/whoops": "^2.1",
+    "mongodb/mongodb": "^1.1"
+  },
+  "packagist": {
+    "type": "composer",
+    "url": "https://packagist.phpcomposer.com"
+  },
+  "autoload": {
+    "psr-4": {
+      "Maple\\": "classes/src/"
+    }
+  },
+  "repositories": {
+    "packagist": {
+      "type": "composer",
+      "url": "https://packagist.phpcomposer.com"
+    }
+  }
+}
