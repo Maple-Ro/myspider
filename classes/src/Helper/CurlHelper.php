@@ -1,6 +1,6 @@
 <?php
 /**
- * Description:
+ * Description:借助curl完成抓取页面内容的功能，类似一个浏览器
  * User: Endless
  * Date: 2017/4/4
  * Time: 10:44
@@ -11,7 +11,8 @@ namespace Maple\Helper;
 
 class CurlHelper
 {
-    protected $userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36';
+    protected $userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) 
+                                                    Chrome/44.0.2403.89 Safari/537.36';
     protected $timeout = 10;
     protected $ch = null;
     protected $httpRaw = false;
@@ -39,7 +40,6 @@ class CurlHelper
 
     private function init()
     {
-        //if (empty ( $this->ch ))
         if (!is_resource($this->ch)) {
             $this->ch = curl_init();
             curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, true);//返回内容为字符串
@@ -53,7 +53,7 @@ class CurlHelper
         return $this->ch;
     }
 
-    public function get(string $url, $fields = [])
+    public function get(string $url, array $fields = [])
     {
         return $this->request($url, 'get', $fields);
     }
