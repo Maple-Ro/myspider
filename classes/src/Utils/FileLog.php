@@ -9,11 +9,18 @@
 namespace Maple\Utils;
 
 
+/**
+ * 文件日志存储类
+ * Class FileLog
+ * @package Maple\Utils
+ */
 class FileLog implements IlogStorage
 {
 
-    function add(string $name, string $msg)
+    function add(string $msg)
     {
-        // TODO: Implement add() method.
+        $dir = ROOT . 'data/log';
+        if (!is_dir($dir)) mkdir($dir, 0777, true);
+        file_put_contents($dir . '/spider_log.log', $msg, FILE_APPEND | LOCK_EX);
     }
 }

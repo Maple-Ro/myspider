@@ -8,7 +8,11 @@
 
 namespace Maple\Helper;
 
-
+/**
+ * redis操作类，将底层的redis操作封装起来
+ * Class RedisHelper
+ * @package Maple\Helper
+ */
 class RedisHelper
 {
     /**

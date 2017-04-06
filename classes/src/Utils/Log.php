@@ -10,26 +10,29 @@
 namespace Maple\Utils;
 class Log
 {
-    public static $log_show = false;
-    public static $log_file = false;
     /**
      * @var IlogStorage 存储实例
      * 可便捷切换不同的日志存储方式
      */
     private $storage;
-    private $instance;
+    private static $instance;
 
-    function __construct(IlogStorage $storage)
+    private function __construct(IlogStorage $storage)
     {
-        return $this->init($storage);
+        $this->storage = $storage;
     }
 
-    private function init(IlogStorage $storage)
+    private function __clone()
     {
-        if(isset($this->instance)){
-            return new Log($storage);
+        // TODO: Implement __clone() method.
+    }
+
+    public static function getInstance(IlogStorage $storage)
+    {
+        if (isset(self::$instance)) {
+            self::$instance = new Log($storage);
         }
-        return $this->instance;
+        return self::$instance;
     }
 
     public function info(string $msg)
@@ -67,11 +70,7 @@ class Log
 
     public function add(string $msg)
     {
-        if (self::$log_show) {
-            echo $msg;
-        }
-        $name = '';
-        $this->storage->add($name, $msg);
+        $this->storage->add($msg);
 //        file_put_contents(self::$log_file, $msg, FILE_APPEND | LOCK_EX);
     }
 

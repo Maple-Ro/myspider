@@ -16,5 +16,5 @@ interface IlogStorage
      * @param string $msg 日志信息
      * @return mixed
      */
-    function add(string $name, string $msg);
+    function add(string $msg);
 }
